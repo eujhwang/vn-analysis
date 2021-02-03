@@ -1,3 +1,13 @@
+build/
+dist/
+*.egg-info/
+dataset/
+*.swp
+*.vscode
+*.DS_Store
+*.pt
+*.so
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
