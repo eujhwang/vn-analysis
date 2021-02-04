@@ -1,10 +1,10 @@
 # OGB Revisited
 
 ## Installation
-* Tested with Python 3.7, PyTorch 1.5.0, and PyTorch Geometric 1.6.0
+* Tested with Python 3.7, PyTorch 1.7.1., and PyTorch Geometric 1.6.3
 * Set up an Anaconda environment: `./setup.sh` 
-<br/>(set the CUDA_TK variable in the script)
-<br/> ALso, you need to have installed [Anaconda](https://www.anaconda.com/products/individual#Downloads). See also the [Installation instructions](https://docs.anaconda.com/anaconda/install/).
+<br/>(if you install locally w/o CUDA you may need to adapt the torch installation command)
+<br/> Aso, you need to have installed [Anaconda](https://www.anaconda.com/products/individual#Downloads). See the [Installation instructions](https://docs.anaconda.com/anaconda/install/).
 * Alternatively, install the above and the packages listed in [requirements.txt](requirements.txt)
 
 NOTE I did not test the setup since I have everything installed on my machines. Please let me know if we have to fix this description, add packages or similar.

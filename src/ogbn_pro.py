@@ -108,12 +108,8 @@ def main():
     # Move edge features to node features.
     # need to get adj_t for that already now, to init x
     # copy is not needed since seems to only do a sort of the edge index
-    data = ToSparseTensor(remove_edge_index=False)(data, data.num_nodes)
-    data.x = data.adj_t.mean(dim=1)
-
-
-    # need to get adj_t again, now for (possibly) extended data
     data = ToSparseTensor()(data, data.num_nodes)
+    data.x = data.adj_t.mean(dim=1)
     data.adj_t.set_value_(None)
     data = data.to(device)
     ##################################################################

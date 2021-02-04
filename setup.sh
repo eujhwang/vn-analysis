@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-CUDA_TK=10.1
-
 if source activate ogb; then
 	:
 else
@@ -10,13 +8,14 @@ else
 	source activate ogb
 fi
 
+CUDA=$($PYTHON -c "import torch; print(torch.version.cuda)")
+
 # see instructions at https://pytorch.org/get-started/locally/
-conda install pytorch torchvision torchaudio cudatoolkit=$CUDA_TK -c pytorch
+conda install pytorch torchvision torchaudio cudatoolkit=$CUDA -c pytorch
 
 TORCH=$($PYTHON -c "import torch; print(torch.__version__)")
 TORCH=${TORCH:0:5}
 
-CUDA=$($PYTHON -c "import torch; print(torch.version.cuda)")
 if [ "${CUDA}" = "None" ]; then
   CUDA="cpu"
 else
