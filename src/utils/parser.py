@@ -15,13 +15,12 @@ def build_args(ident):
 
 def register_default_args(parser, ident):
     parser.add_argument('--device', type=int, default=0)
-    # parser.add_argument('--log_steps', type=int, default=1)
-    parser.add_argument('--eval_steps', type=int, default=1)  # LEAVE 1 since logger not adapted for others if torch.cuda.is_available() else 2)  # pro default
+    parser.add_argument('--eval_steps', type=int, default=1)  # LEAVE 1 for now since logger not adapted for others yet
     parser.add_argument('--lr', type=float, default=0.01)
     parser.add_argument('--runs', type=int, default=10 if torch.cuda.is_available() else 3)
-    parser.add_argument('--epochs', type=int, default=2000 if torch.cuda.is_available() else 2)  # pro default
-    parser.add_argument('--patience', default=0, type=int)  # pro default
-    parser.add_argument('--batch_size', type=int, default=16 * 1024)  # ppa only
+    parser.add_argument('--epochs', type=int, default=2000 if torch.cuda.is_available() else 2)  # ogbn-pro default
+    parser.add_argument('--patience', default=0, type=int)  # ogbn-pro default
+    parser.add_argument('--batch_size', type=int, default=16 * 1024)  # currently ogbl-ppa only
 
     parser.add_argument('--dir_data', type=str, default="")
     parser.add_argument('--dir_results', type=str, default="../r_{}".format(ident))
@@ -31,7 +30,7 @@ def register_default_args(parser, ident):
     parser.add_argument('--checkpoint', type=str, default="")
     parser.add_argument('--train_idx', default="")
 
-    parser.add_argument('--gnn', type=str, default="gcn", choices=["gcn", "sage", "mlp"])
+    parser.add_argument('--model', type=str, default="gcn", choices=["gcn", "sage", "mlp"])
     parser.add_argument('--layers', type=int, default=3)
     parser.add_argument('--hid_dim', type=int, default=256)
     parser.add_argument('--dropout', type=float, default=0.0)

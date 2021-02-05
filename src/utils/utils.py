@@ -86,8 +86,15 @@ def get_nodes_small(nodes):
 
 
 # helper method to test locally
+# edge is in pyg's edge_index format
 def get_edges_small_index(edge):
     return ((edge[0, :] < 3000) & (edge[1, :] < 3000))
+
+
+# helper method to test locally
+# edge is a sequence of edge pairs
+def get_edge_pairs_small(edge):
+    return edge[(edge[:, 0] < 3000) & (edge[:, 1] < 3000), :]
 
 
 # helper method to test locally

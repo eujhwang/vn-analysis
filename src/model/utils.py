@@ -8,17 +8,17 @@ def init_model(args, data, dataset_id, outdim=None):
     if outdim is None:
         outdim = args.hid_dim
 
-    if args.gnn == "mlp":
+    if args.model == "mlp":
         model = MLP(data.num_features, args.hid_dim, outdim, args.layers,
                     args.dropout)
         if args.use_node_embedding:
             embedding = torch.load("model/embedding_{}.pt".format(dataset_id)).to(data.device)  # , map_location='cpu')
             data.x = torch.cat([data.x, embedding], dim=-1)
-    elif args.gnn == "sage":
+    elif args.model == "sage":
         model = SAGE(data.num_features, args.hid_dim, outdim,
                      args.layers, args.dropout)
         precompute_norm(data)
-    elif args.gnn == "gcn":
+    elif args.model == "gcn":
         model = GCN(data.num_features, args.hid_dim, outdim,
                     args.layers, args.dropout)
         precompute_norm(data)

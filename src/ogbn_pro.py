@@ -8,7 +8,7 @@ from utils.utils import *
 from utils.logger import Logger
 from model.utils import init_model
 
-# necessary to flush on some clusters, setting it globally here
+# necessary to flush on some nodes, setting it globally here
 import functools
 print = functools.partial(print, flush=True)
 
@@ -22,8 +22,6 @@ def train(model, data, train_idx, optimizer):
     out = model(data.x, data.adj_t)[train_idx]
     loss = criterion(out, data.y[train_idx].to(torch.float))
     loss.backward()
-
-    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
 
     optimizer.step()
 
@@ -82,7 +80,7 @@ def main():
 
     data = dataset[0]
 
-    assert args.gnn  # must not be empty for node property prediction
+    assert args.model  # must not be empty for node property prediction
 
     split_idx = dataset.get_idx_split()
     if args.train_idx:  # select a subset of edges to train on
@@ -108,7 +106,7 @@ def main():
     # Move edge features to node features.
     # need to get adj_t for that already now, to init x
     # copy is not needed since seems to only do a sort of the edge index
-    data = ToSparseTensor()(data, data.num_nodes)
+    data = ToSparseTensor()(data, data.num_nodes)  # we do the sparse transformation manually here since we above may change the edge_index using our train_idx
     data.x = data.adj_t.mean(dim=1)
     data.adj_t.set_value_(None)
     data = data.to(device)
