@@ -182,7 +182,7 @@ def main():
     model = init_model(args, data, dataset_id)
     model = model.to(device)
 
-    predictor = LinkPredictor(args.hid_dim, args.hid_dim, 1, args.layers, args.dropout).to(device)
+    predictor = LinkPredictor(args.hid_dim, args.hid_dim, 1, args.lp_layers, args.dropout).to(device)
 
     evaluator = Evaluator(name=dataset_id)
 

@@ -35,5 +35,7 @@ def register_default_args(parser, ident):
     parser.add_argument('--hid_dim', type=int, default=256)
     parser.add_argument('--dropout', type=float, default=0.0)
 
+    parser.add_argument('--lp_layers', type=int, default=3)
+
     parser.add_argument('--use_node_embedding', type=int, default=0, choices=[0, 1])  # for mlp
 
