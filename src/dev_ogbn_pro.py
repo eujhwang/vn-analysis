@@ -167,8 +167,8 @@ def setup(args):
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     evaluator = Evaluator(name=dataset_id)
-    logger = Logger(args.runs, args)
-    return train_idx, data, model, optimizer, evaluator, logger, data_split_idx
+    # logger = Logger(args.runs, args)
+    return train_idx, data, model, optimizer, evaluator, data_split_idx
 
 
 def main():
@@ -178,7 +178,7 @@ def main():
     wandb.init(project="ogb-revisited", entity="hwang7520")
     wandb.config.update(args, allow_val_change=True)
     args = wandb.config
-    train_idx, data, model, optimizer, evaluator, logger, data_split_idx = setup(args)
+    train_idx, data, model, optimizer, evaluator, data_split_idx = setup(args)
     training(args, data_split_idx, train_idx, data, model, optimizer, evaluator)
 
 
