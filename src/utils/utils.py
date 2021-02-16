@@ -1,4 +1,7 @@
 import os
+import warnings
+from typing import Optional
+
 import torch
 from torch_sparse import SparseTensor
 
@@ -100,3 +103,11 @@ def get_edge_pairs_small(edge):
 # helper method to test locally
 def get_edges_small(edge):
     return edge[get_edges_small_index(edge)]
+
+
+def cuda_if_available(device) -> torch.device:
+    device = f'cuda:{device}' if torch.cuda.is_available() else 'cpu'
+    device = torch.device(device)
+    return device
+
+

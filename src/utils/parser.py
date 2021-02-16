@@ -1,4 +1,5 @@
 import argparse
+import random
 import torch
 
 
@@ -39,3 +40,4 @@ def register_default_args(parser, ident):
 
     parser.add_argument('--use_node_embedding', type=int, default=0, choices=[0, 1])  # for mlp
 
+    parser.add_argument('--seed', type=int, default=random.randint(0, 2 ** 32), help="seed for random number generator")
