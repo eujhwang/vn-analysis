@@ -49,7 +49,7 @@ def training(
                 },
                 commit=False,
             )
-            early_stopping(valid_rocauc)
+            early_stopping(prev_best)
         wandb.log({})
     print("done!")
 
