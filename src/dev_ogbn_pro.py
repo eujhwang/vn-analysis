@@ -20,9 +20,11 @@ print = functools.partial(print, flush=True)
 
 def training(
         args: Dict[str, Any], data_split_idx: Dict[str, Tensor], train_idx: Tensor, data: Any, model: Module, optimizer: torch.optim.Optimizer,
-        evaluator: Module,
+        evaluator: Module, early_stopping: Module
     ):
+    print("Training start..")
     start_epoch = 1
+    prev_best = 0.0
     for epoch in range(start_epoch, 1 + args.epochs):
         loss = train(model, data, train_idx, optimizer)
         wandb.log(
@@ -35,14 +37,21 @@ def training(
         if epoch % args.eval_steps == 0:
             result = evaluation(model, data, data_split_idx, evaluator)
             train_rocauc, valid_rocauc, test_rocauc = result
+
+            if prev_best < valid_rocauc:
+                prev_best = valid_rocauc
+
             wandb.log(
                 {
                     "[Train] ROC AUC": train_rocauc,
                     "[Valid] ROC AUC": valid_rocauc,
+                    "[Valid] Best ROC AUC": prev_best,
                 },
                 commit=False,
             )
+            early_stopping(valid_rocauc)
         wandb.log({})
+    print("done!")
 
 
 def train(model, data, train_idx, optimizer):
@@ -135,11 +144,11 @@ def _edge_to_node(data: Any):
 
 
 def _set_seed(seed: int):
-    torch.manual_seed(seed)  # why set seed at this stage?
+    torch.manual_seed(seed)
     random.seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed(seed)
-        torch.backends.cudnn.benchmark = True
+        # torch.backends.cudnn.benchmark = True
 
 
 def setup(args):
@@ -167,8 +176,9 @@ def setup(args):
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     evaluator = Evaluator(name=dataset_id)
+    early_stopping = EarlyStopping("Accuracy", patience=args.patience)
     # logger = Logger(args.runs, args)
-    return train_idx, data, model, optimizer, evaluator, data_split_idx
+    return train_idx, data, model, optimizer, evaluator, early_stopping, data_split_idx
 
 
 def main():
@@ -178,8 +188,8 @@ def main():
     wandb.init(project="ogb-revisited", entity="hwang7520")
     wandb.config.update(args, allow_val_change=True)
     args = wandb.config
-    train_idx, data, model, optimizer, evaluator, data_split_idx = setup(args)
-    training(args, data_split_idx, train_idx, data, model, optimizer, evaluator)
+    train_idx, data, model, optimizer, evaluator, early_stopping, data_split_idx = setup(args)
+    training(args, data_split_idx, train_idx, data, model, optimizer, evaluator, early_stopping)
 
 
 if __name__ == "__main__":

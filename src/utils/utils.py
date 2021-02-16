@@ -111,3 +111,35 @@ def cuda_if_available(device) -> torch.device:
     return device
 
 
+class EarlyStoppingException(Exception):
+    """Max Value Exceeded"""
+
+    def __init__(self, condition: str):
+        self.condition = condition
+
+    def __str__(self):
+        return f"EarlyStopping: {self.condition}"
+
+
+class EarlyStopping:
+    """
+    Stop looping if a value is stagnant.
+    name: str = "EarlyStopping value"
+    patience: int = 10
+    """
+    def __init__(self, name: str, patience: int):
+        self.name = name
+        self.patience = patience
+        self.count = 0
+        self.value = 0
+
+    def __call__(self, value):
+        if value == self.value:
+            self.count += 1
+            if self.count >= self.patience:
+                raise EarlyStoppingException(
+                    f"{self.name} has not changed in {self.patience} steps."
+                )
+        else:
+            self.value = value
+            self.count = 0
