@@ -152,7 +152,7 @@ def main():
         if args.checkpointing and args.checkpoint:
             # signal that it has been used
             args.checkpoint = ""
-            loggers, start_epoch, model, optimizer = load_checkpoint(checkpoint_fn, model, optimizer)
+            logger, start_epoch, model, optimizer = load_checkpoint(checkpoint_fn, model, optimizer)
             start_epoch += 1
 
         for epoch in range(start_epoch, 1 + args.epochs):
