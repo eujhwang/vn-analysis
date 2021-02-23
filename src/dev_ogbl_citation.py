@@ -52,8 +52,8 @@ def training(
             valid_result = evaluation("valid", model, predictor, data, data_edge_dict, evaluator, args.batch_size, pos_train_pred)
             test_result = evaluation("test", model, predictor, data, data_edge_dict, evaluator, args.batch_size, pos_train_pred)
             print("valid_result:", valid_result)
-            if prev_best < valid_result["[Valid] Hits@50"]:
-                prev_best = valid_result["[Valid] Hits@50"]
+            if prev_best < valid_result["[Valid] MRR"]:
+                prev_best = valid_result["[Valid] MRR"]
             wandb.log(valid_result, commit=False)
             early_stopping(prev_best)
         wandb.log({})
