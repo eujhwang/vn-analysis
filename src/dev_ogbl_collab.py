@@ -152,7 +152,7 @@ def evaluation(type, model, predictor, data, data_edge_dict, evaluator, batch_si
 
 def _create_dataset(args: Dict[str, Any], dataset_id: str):
     dataset = PygLinkPropPredDataset(name=dataset_id,
-                                     root="../data" if not args.dir_data else args.dir_data)
+                                     root="data" if not args.dir_data else args.dir_data)
     data = dataset[0] # Data(edge_index=[2, 42463862], x=[576289, 58])
 
     edge_index = data.edge_index
