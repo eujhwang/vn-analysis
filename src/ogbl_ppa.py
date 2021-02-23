@@ -170,7 +170,7 @@ def main():
         split_edge['train']['edge'] = split_edge['train']['edge'][train_idx]
 
         train_idx1 = [i*2 for i in train_idx] + [(i*2)+1 for i in train_idx]
-        data.edge_index = data.edge_index[:, train_idx1]   # we now have the edges shuffled because the second index is concatenated
+        data.edge_index = data.edge_index[:, train_idx1]
 
     ##################################################################
 
@@ -233,6 +233,7 @@ def main():
             start_epoch += 1
 
         for epoch in range(start_epoch, 1 + args.epochs):
+            print("epoch: %d", epoch)
             old_checkpoint_fn = checkpoint_fn
             checkpoint_fn = '%s.pt' % os.path.join(args.dir_save, args.filename + "_" + str(run) + "_" + str(epoch))
 

@@ -5,21 +5,25 @@ from model.mlp import MLP
 
 def init_model(args, data, dataset_id, outdim=None):
     model = None
+    input_dim = data.num_features
+    if dataset_id == "ogbl-ddi":
+        input_dim = args.hid_dim
+
     if outdim is None:
         outdim = args.hid_dim
 
     if args.model == "mlp":
-        model = MLP(data.num_features, args.hid_dim, outdim, args.layers,
+        model = MLP(input_dim, args.hid_dim, outdim, args.layers,
                     args.dropout)
         if args.use_node_embedding:
             embedding = torch.load("model/embedding_{}.pt".format(dataset_id)).to(data.device)  # , map_location='cpu')
             data.x = torch.cat([data.x, embedding], dim=-1)
     elif args.model == "sage":
-        model = SAGE(data.num_features, args.hid_dim, outdim,
+        model = SAGE(input_dim, args.hid_dim, outdim,
                      args.layers, args.dropout)
         precompute_norm(data)
     elif args.model == "gcn":
-        model = GCN(data.num_features, args.hid_dim, outdim,
+        model = GCN(input_dim, args.hid_dim, outdim,
                     args.layers, args.dropout)
         precompute_norm(data)
     return model
