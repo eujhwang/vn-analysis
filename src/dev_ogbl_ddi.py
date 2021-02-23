@@ -11,8 +11,9 @@ from torch import Tensor
 from torch.nn import Module
 from torch.utils.data import DataLoader
 import torch_geometric.transforms as T
-
+from torch_geometric.utils import negative_sampling
 from tqdm import tqdm
+
 from model.mlp import LinkPredictor
 from utils.parser import build_args
 from utils.utils import *
@@ -26,20 +27,20 @@ print = functools.partial(print, flush=True)
 
 def training(
         args: Dict[str, Any], data: Any, data_edge_dict: Dict[str, Tensor], model: Module, predictor: Module,
-        optimizer: torch.optim.Optimizer, evaluator: Module, early_stopping: Module
+        optimizer: torch.optim.Optimizer, evaluator: Module, early_stopping: Module,
+        adj_t: Optional[Any]=None, emb: Optional[Any]=None
     ):
     print("Training start..")
-
+    torch.nn.init.xavier_uniform_(emb.weight)
     model.reset_parameters()
     predictor.reset_parameters()
 
     start_epoch = 1
     prev_best = 0.0
-    full_start_time = time.time()
     for epoch in range(start_epoch, 1 + args.epochs):
         epoch_start_time = time.time()
 
-        loss, pos_train_pred = train(model, predictor, data, data_edge_dict, optimizer, args.batch_size)
+        loss, pos_train_pred = train(model, predictor, emb.weight, adj_t, data_edge_dict, optimizer, args.batch_size)
         wandb.log(
             {
                 "[Train] Epoch": epoch,
@@ -50,22 +51,25 @@ def training(
         )
 
         if epoch % args.eval_steps == 0:
-            valid_result = evaluation("valid", model, predictor, data, data_edge_dict, evaluator, args.batch_size, pos_train_pred)
-            test_result = evaluation("test", model, predictor, data, data_edge_dict, evaluator, args.batch_size, pos_train_pred)
+            valid_result = evaluation("valid", model, predictor, emb.weight, adj_t, data_edge_dict, evaluator, args.batch_size, pos_train_pred)
+            test_result = evaluation("test", model, predictor, emb.weight, adj_t, data_edge_dict, evaluator, args.batch_size, pos_train_pred)
 
-            if prev_best < valid_result["[Valid] Hits@50"]:
-                prev_best = valid_result["[Valid] Hits@50"]
+            if prev_best < valid_result["[Valid] Hits@20"]:
+                prev_best = valid_result["[Valid] Hits@20"]
             wandb.log(valid_result, commit=False)
             early_stopping(prev_best)
         wandb.log({})
     print("done!")
 
 
-def train(model, predictor, data, data_edge_dict, optimizer, batch_size):
+def train(model, predictor, x, adj_t, data_edge_dict, optimizer, batch_size):
     model.train()
     predictor.train()
 
-    pos_train_edge = data_edge_dict["train"]["edge"].to(data.x.device)
+    row, col, _ = adj_t.coo()
+    edge_index = torch.stack([col, row], dim=0)
+
+    pos_train_edge = data_edge_dict["train"]["edge"].to(x.device)
     if not torch.cuda.is_available():
         pos_train_edge = get_edge_pairs_small(pos_train_edge)
 
@@ -74,17 +78,19 @@ def train(model, predictor, data, data_edge_dict, optimizer, batch_size):
     pos_train_preds = []
     for i, perm in enumerate(tqdm(train_dataloader)):
         optimizer.zero_grad()
-        h = model(data.x, data.adj_t)
+        h = model(x, adj_t)
 
         edge = pos_train_edge[perm].t()
         pos_out = predictor(h[edge[0]], h[edge[1]])
 
-        edge = torch.randint(0, data.num_nodes, edge.size(), dtype=torch.long, device=h.device)
+        edge = negative_sampling(edge_index, num_nodes=x.size(0),
+                                 num_neg_samples=perm.size(0), method='dense')
         neg_out = predictor(h[edge[0]], h[edge[1]])
 
         loss = loss_func(pos_out, neg_out)
         loss.backward()
 
+        torch.nn.utils.clip_grad_norm_(x, 1.0)
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         torch.nn.utils.clip_grad_norm_(predictor.parameters(), 1.0)
 
@@ -107,12 +113,13 @@ def loss_func(pos_score: Tensor, neg_score: Tensor) -> float:
 
 
 @torch.no_grad()
-def evaluation(type, model, predictor, data, data_edge_dict, evaluator, batch_size, pos_train_pred):
+def evaluation(type, model, predictor, x, adj_t, data_edge_dict, evaluator, batch_size, pos_train_pred):
     model.eval()
     predictor.eval()
     eval_start_time = time.time()
 
-    h = model(data.x, data.adj_t)
+    h = model(x, adj_t)
+
     pos_edge = data_edge_dict[type]["edge"].to(h.device)
     neg_edge = data_edge_dict[type]["edge_neg"].to(h.device)
 
@@ -137,7 +144,7 @@ def evaluation(type, model, predictor, data, data_edge_dict, evaluator, batch_si
 
     metrics_all = {}
     type_name = type.capitalize()
-    for K in [10, 50, 100]:
+    for K in [10, 20, 30]:
         evaluator.K = K
         hits = evaluator.eval({
             "y_pred_pos": pos_pred,
@@ -151,14 +158,18 @@ def evaluation(type, model, predictor, data, data_edge_dict, evaluator, batch_si
 
 def _create_dataset(args: Dict[str, Any], dataset_id: str):
     dataset = PygLinkPropPredDataset(name=dataset_id,
-                                     root="../data" if not args.dir_data else args.dir_data)
+                                     root="../data" if not args.dir_data else args.dir_data,
+                                     transform=T.ToSparseTensor())
+
     data = dataset[0] # Data(edge_index=[2, 42463862], x=[576289, 58])
+    adj_t = data.adj_t
 
-    data.x = data.x.to(torch.float)
-    data = ToSparseTensor()(data, data.x.shape[0])
     data_edge_dict = dataset.get_edge_split()
+    idx = torch.randperm(data_edge_dict['train']['edge'].size(0))
+    idx = idx[:data_edge_dict['valid']['edge'].size(0)]
+    data_edge_dict['eval_train'] = {'edge': data_edge_dict['train']['edge'][idx]}
 
-    return data, data_edge_dict
+    return data, data_edge_dict, adj_t
 
 
 def _set_seed(seed: int):
@@ -172,22 +183,25 @@ def _set_seed(seed: int):
 def setup(args):
     device = cuda_if_available(args.device)
 
-    dataset_id = "ogbl-ppa"
+    dataset_id = "ogbl-ddi"
     _create_dataset(args, dataset_id)
-    data, data_edge_dict = _create_dataset(args, dataset_id)
+    data, data_edge_dict, adj_t = _create_dataset(args, dataset_id)
     data = data.to(device)
+    adj_t = adj_t.to(device)
 
     model = init_model(args, data, dataset_id, outdim=None)
     model = model.to(device)
 
     wandb.watch(model)
 
+    emb = torch.nn.Embedding(data.num_nodes, args.hid_dim).to(device)
+
     predictor = LinkPredictor(args.hid_dim, args.hid_dim, 1, args.lp_layers, args.dropout).to(device)
-    optimizer = torch.optim.Adam(list(model.parameters()) + list(predictor.parameters()), lr=args.lr)
+    optimizer = torch.optim.Adam(list(model.parameters()) + list(predictor.parameters()) + list(emb.parameters()), lr=args.lr)
     evaluator = Evaluator(name=dataset_id)
     early_stopping = EarlyStopping("Accuracy", patience=args.patience)
 
-    return data, data_edge_dict, model, predictor, optimizer, evaluator, early_stopping
+    return data, data_edge_dict, model, predictor, optimizer, evaluator, early_stopping, adj_t, emb
 
 
 def main():
@@ -198,8 +212,8 @@ def main():
     wandb.config.update(args, allow_val_change=True)
     args = wandb.config
     setup(args)
-    data, data_edge_dict, model, predictor, optimizer, evaluator, early_stopping = setup(args)
-    training(args, data, data_edge_dict, model, predictor, optimizer, evaluator, early_stopping)
+    data, data_edge_dict, model, predictor, optimizer, evaluator, early_stopping, adj_t, emb = setup(args)
+    training(args, data, data_edge_dict, model, predictor, optimizer, evaluator, early_stopping, adj_t, emb)
 
 
 if __name__ == "__main__":

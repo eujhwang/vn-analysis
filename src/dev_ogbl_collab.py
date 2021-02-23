@@ -66,8 +66,8 @@ def train(model, predictor, data, data_edge_dict, optimizer, batch_size):
     predictor.train()
 
     pos_train_edge = data_edge_dict["train"]["edge"].to(data.x.device)
-    if not torch.cuda.is_available():
-        pos_train_edge = get_edge_pairs_small(pos_train_edge)
+    # if not torch.cuda.is_available():
+    #     pos_train_edge = get_edge_pairs_small(pos_train_edge)
 
     train_dataloader = DataLoader(range(pos_train_edge.size(0)), batch_size, shuffle=True)
     total_loss = 0
@@ -113,12 +113,13 @@ def evaluation(type, model, predictor, data, data_edge_dict, evaluator, batch_si
     eval_start_time = time.time()
 
     h = model(data.x, data.adj_t)
+
     pos_edge = data_edge_dict[type]["edge"].to(h.device)
     neg_edge = data_edge_dict[type]["edge_neg"].to(h.device)
 
-    if not torch.cuda.is_available():
-        pos_edge = get_edge_pairs_small(pos_edge)
-        neg_edge = get_edge_pairs_small(neg_edge)
+    # if not torch.cuda.is_available():
+    #     pos_edge = get_edge_pairs_small(pos_edge)
+    #     neg_edge = get_edge_pairs_small(neg_edge)
 
     pos_dataloader = DataLoader(range(pos_edge.size(0)), batch_size)
     neg_dataloader = DataLoader(range(neg_edge.size(0)), batch_size)
@@ -154,9 +155,20 @@ def _create_dataset(args: Dict[str, Any], dataset_id: str):
                                      root="../data" if not args.dir_data else args.dir_data)
     data = dataset[0] # Data(edge_index=[2, 42463862], x=[576289, 58])
 
-    data.x = data.x.to(torch.float)
+    edge_index = data.edge_index
+    data.edge_weight = data.edge_weight.view(-1).to(torch.float)
     data = ToSparseTensor()(data, data.x.shape[0])
+
     data_edge_dict = dataset.get_edge_split()
+
+    # Use training + validation edges for inference on test set.
+    if args.use_valedges_as_input:
+        val_edge_index = data_edge_dict['valid']['edge'].t()
+        full_edge_index = torch.cat([edge_index, val_edge_index], dim=-1)
+        data.full_adj_t = SparseTensor.from_edge_index(full_edge_index).t()
+        data.full_adj_t = data.full_adj_t.to_symmetric()
+    else:
+        data.full_adj_t = data.adj_t
 
     return data, data_edge_dict
 
@@ -172,7 +184,7 @@ def _set_seed(seed: int):
 def setup(args):
     device = cuda_if_available(args.device)
 
-    dataset_id = "ogbl-ppa"
+    dataset_id = "ogbl-collab"
     _create_dataset(args, dataset_id)
     data, data_edge_dict = _create_dataset(args, dataset_id)
     data = data.to(device)
@@ -191,7 +203,7 @@ def setup(args):
 
 
 def main():
-    args = build_args("ppa")
+    args = build_args("collab")
     assert args.model  # must not be empty for node property prediction
     _set_seed(args.seed)
     wandb.init(project="ogb-revisited", entity="hwang7520")

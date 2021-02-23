@@ -35,7 +35,6 @@ def training(
 
     start_epoch = 1
     prev_best = 0.0
-    full_start_time = time.time()
     for epoch in range(start_epoch, 1 + args.epochs):
         epoch_start_time = time.time()
 
@@ -52,7 +51,7 @@ def training(
         if epoch % args.eval_steps == 0:
             valid_result = evaluation("valid", model, predictor, data, data_edge_dict, evaluator, args.batch_size, pos_train_pred)
             test_result = evaluation("test", model, predictor, data, data_edge_dict, evaluator, args.batch_size, pos_train_pred)
-
+            print("valid_result:", valid_result)
             if prev_best < valid_result["[Valid] Hits@50"]:
                 prev_best = valid_result["[Valid] Hits@50"]
             wandb.log(valid_result, commit=False)
@@ -65,22 +64,22 @@ def train(model, predictor, data, data_edge_dict, optimizer, batch_size):
     model.train()
     predictor.train()
 
-    pos_train_edge = data_edge_dict["train"]["edge"].to(data.x.device)
-    if not torch.cuda.is_available():
-        pos_train_edge = get_edge_pairs_small(pos_train_edge)
+    source_edge = data_edge_dict['train']['source_node'].to(data.x.device)
+    target_edge = data_edge_dict['train']['target_node'].to(data.x.device)
 
-    train_dataloader = DataLoader(range(pos_train_edge.size(0)), batch_size, shuffle=True)
+    train_dataloader = DataLoader(range(source_edge.size(0)), batch_size, shuffle=True)
     total_loss = 0
     pos_train_preds = []
     for i, perm in enumerate(tqdm(train_dataloader)):
         optimizer.zero_grad()
         h = model(data.x, data.adj_t)
 
-        edge = pos_train_edge[perm].t()
-        pos_out = predictor(h[edge[0]], h[edge[1]])
+        src, dst = source_edge[perm], target_edge[perm]
 
-        edge = torch.randint(0, data.num_nodes, edge.size(), dtype=torch.long, device=h.device)
-        neg_out = predictor(h[edge[0]], h[edge[1]])
+        pos_out = predictor(h[src], h[dst])
+
+        dst_neg = torch.randint(0, data.num_nodes, src.size(), dtype=torch.long, device=h.device)
+        neg_out = predictor(h[src], h[dst_neg])
 
         loss = loss_func(pos_out, neg_out)
         loss.backward()
@@ -113,38 +112,34 @@ def evaluation(type, model, predictor, data, data_edge_dict, evaluator, batch_si
     eval_start_time = time.time()
 
     h = model(data.x, data.adj_t)
-    pos_edge = data_edge_dict[type]["edge"].to(h.device)
-    neg_edge = data_edge_dict[type]["edge_neg"].to(h.device)
 
-    if not torch.cuda.is_available():
-        pos_edge = get_edge_pairs_small(pos_edge)
-        neg_edge = get_edge_pairs_small(neg_edge)
+    source_edge = data_edge_dict[type]['source_node'].to(h.device)
+    target_edge = data_edge_dict[type]['target_node'].to(h.device)
+    target_neg_edge = data_edge_dict[type]['target_node_neg'].to(h.device)
 
-    pos_dataloader = DataLoader(range(pos_edge.size(0)), batch_size)
-    neg_dataloader = DataLoader(range(neg_edge.size(0)), batch_size)
-
+    pos_dataloader = DataLoader(range(source_edge.size(0)), batch_size)
     pos_preds = []
     for perm in tqdm(pos_dataloader):
-        edge = pos_edge[perm].t()
-        pos_preds += [predictor(h[edge[0]], h[edge[1]]).squeeze().cpu()]
+        src, dst = source_edge[perm], target_edge[perm]
+        pos_preds += [predictor(h[src], h[dst]).squeeze().cpu()]
     pos_pred = torch.cat(pos_preds, dim=0)
 
     neg_preds = []
+    source_edge = source_edge.view(-1, 1).repeat(1, 1000).view(-1)
+    target_neg_edge = target_neg_edge.view(-1)
+    neg_dataloader = DataLoader(range(source_edge.size(0)), batch_size)
     for perm in tqdm(neg_dataloader):
-        edge = neg_edge[perm].t()
-        neg_preds += [predictor(h[edge[0]], h[edge[1]]).squeeze().cpu()]
-    neg_pred = torch.cat(neg_preds, dim=0)
+        src, dst_neg = source_edge[perm], target_neg_edge[perm]
+        neg_preds += [predictor(h[src], h[dst_neg]).squeeze().cpu()]
+    neg_pred = torch.cat(neg_preds, dim=0).view(-1, 1000)
 
     metrics_all = {}
     type_name = type.capitalize()
-    for K in [10, 50, 100]:
-        evaluator.K = K
-        hits = evaluator.eval({
-            "y_pred_pos": pos_pred,
-            "y_pred_neg": neg_pred,
-        })[f"hits@{K}"]
-        metrics_all[f"[{type_name}] Hits@{K}"] = hits
-
+    mrr = evaluator.eval({
+        "y_pred_pos": pos_pred,
+        "y_pred_neg": neg_pred,
+    })[f"mrr_list"].mean().item()
+    metrics_all[f"[{type_name}] MRR"] = mrr
     metrics_all[f"[{type_name}] Elapsed Time"] = time.time() - eval_start_time
     return metrics_all
 
@@ -153,10 +148,17 @@ def _create_dataset(args: Dict[str, Any], dataset_id: str):
     dataset = PygLinkPropPredDataset(name=dataset_id,
                                      root="../data" if not args.dir_data else args.dir_data)
     data = dataset[0] # Data(edge_index=[2, 42463862], x=[576289, 58])
-
-    data.x = data.x.to(torch.float)
     data = ToSparseTensor()(data, data.x.shape[0])
+
+    data.adj_t = data.adj_t.to_symmetric()
     data_edge_dict = dataset.get_edge_split()
+
+    idx = torch.randperm(data_edge_dict['train']['source_node'].numel())[:86596]
+    data_edge_dict['eval_train'] = {
+        'source_node': data_edge_dict['train']['source_node'][idx],
+        'target_node': data_edge_dict['train']['target_node'][idx],
+        'target_node_neg': data_edge_dict['valid']['target_node_neg'],
+    }
 
     return data, data_edge_dict
 
@@ -172,7 +174,7 @@ def _set_seed(seed: int):
 def setup(args):
     device = cuda_if_available(args.device)
 
-    dataset_id = "ogbl-ppa"
+    dataset_id = "ogbl-citation2"
     _create_dataset(args, dataset_id)
     data, data_edge_dict = _create_dataset(args, dataset_id)
     data = data.to(device)
@@ -191,7 +193,7 @@ def setup(args):
 
 
 def main():
-    args = build_args("ppa")
+    args = build_args("citation")
     assert args.model  # must not be empty for node property prediction
     _set_seed(args.seed)
     wandb.init(project="ogb-revisited", entity="hwang7520")
