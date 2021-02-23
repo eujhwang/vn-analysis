@@ -154,12 +154,6 @@ def _set_seed(seed: int):
 def setup(args):
     device = cuda_if_available(args.device)
 
-    # os.makedirs(args.dir_results, exist_ok=True)
-    # os.makedirs(args.dir_save, exist_ok=True)
-    #
-    # save_args(args, os.path.join(args.dir_results, "a_" + args.filename + '.csv'))  # save arguments
-    # train_file, res_file = _save_results(args)
-
     dataset_id = "ogbn-proteins"
     data, data_split_idx, train_idx = _create_dataset(args, dataset_id)
     train_idx = train_idx.to(device)
