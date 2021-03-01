@@ -102,16 +102,16 @@ class Trainer:
 
                 if self.dataset_id == "ogbl-ppa":
                     if self.prev_best < metrics["[Valid] Hits@100"]:
-                        prev_best = metrics["[Valid] Hits@100"]
+                        self.prev_best = metrics["[Valid] Hits@100"]
                 elif self.dataset_id == "ogbl-ddi":
                     if self.prev_best < metrics["[Valid] Hits@20"]:
-                        prev_best = metrics["[Valid] Hits@20"]
+                        self.prev_best = metrics["[Valid] Hits@20"]
                 elif self.dataset_id == "ogbl-collab":
                     if self.prev_best < metrics["[Valid] Hits@50"]:
-                        prev_best = metrics["[Valid] Hits@50"]
+                        self.prev_best = metrics["[Valid] Hits@50"]
 
                 wandb.log(metrics, commit=False)
-                self.early_stopping(prev_best)
+                self.early_stopping(self.prev_best)
             wandb.log({})
         print("done!")
 
