@@ -20,8 +20,9 @@ def register_default_args(parser, ident):
     parser.add_argument('--lr', type=float, default=0.01)
     parser.add_argument('--epochs', type=int, default=2000 if torch.cuda.is_available() else 10)  # ogbn-pro default
     parser.add_argument('--patience', default=100, type=int)  # ogbn-pro default
-    parser.add_argument('--batch_size', type=int, default=16 * 1024)  # currently ogbl-ppa only
-    parser.add_argument('--dir_data', type=str, default="data")
+    # parser.add_argument('--batch_size', type=int, default=16 * 1024)  # currently ogbl-ppa only
+    parser.add_argument('--log_batch_size', type=int, default=14)  # currently ogbl-ppa only
+    parser.add_argument('--data_dir', type=str, default="data")
 
     parser.add_argument('--model', type=str, default="gcn", choices=["gcn", "sage", "mlp"])
     parser.add_argument('--layers', type=int, default=3)
@@ -29,6 +30,8 @@ def register_default_args(parser, ident):
     parser.add_argument('--dropout', type=float, default=0.0)
 
     parser.add_argument('--seed', type=int, default=random.randint(0, 2 ** 32), help="seed for random number generator")
+
+    parser.add_argument('--train_idx', type=str, default="", help="use train_idx files for ogbl-ppa")
 
     # LinkPredictor uses lp_layers
     parser.add_argument('--lp_layers', type=int, default=3)

@@ -1,9 +1,13 @@
 import os
+import random
 import warnings
-from typing import Optional
+from pathlib import Path
+from typing import *
 
 import torch
+from ogb.linkproppred import PygLinkPropPredDataset
 from torch_sparse import SparseTensor
+import torch_geometric.transforms as T
 
 
 class ToSparseTensor(object):
@@ -109,6 +113,34 @@ def cuda_if_available(device) -> torch.device:
     device = f'cuda:{device}' if torch.cuda.is_available() else 'cpu'
     device = torch.device(device)
     return device
+
+
+def set_seed(seed: int):
+    torch.manual_seed(seed)
+    random.seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        # torch.backends.cudnn.benchmark = True
+
+
+def create_dataset(dataset_id: str, data_dir: Union[Path, str]):
+    if dataset_id == "ogbl-ppa":
+        dataset = PygLinkPropPredDataset(name=dataset_id, root=data_dir)
+        data = dataset[0] # Data(edge_index=[2, 42463862], x=[576289, 58])
+
+        data.x = data.x.to(torch.float)
+        data = ToSparseTensor()(data, data.x.shape[0])
+        data_edge_dict = dataset.get_edge_split()
+    elif dataset_id == "ogbl-ddi":
+        dataset = PygLinkPropPredDataset(name=dataset_id, root=data_dir, transform=T.ToSparseTensor())
+        data = dataset[0] # Data(edge_index=[2, 42463862], x=[576289, 58])
+
+        data_edge_dict = dataset.get_edge_split()
+        idx = torch.randperm(data_edge_dict['train']['edge'].size(0))
+        idx = idx[:data_edge_dict['valid']['edge'].size(0)]
+        data_edge_dict['eval_train'] = {'edge': data_edge_dict['train']['edge'][idx]}
+
+    return data, data_edge_dict
 
 
 class EarlyStoppingException(Exception):
