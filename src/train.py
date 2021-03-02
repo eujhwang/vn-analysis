@@ -79,6 +79,7 @@ class Trainer:
                 neg_out = self.predictor(h[edge[0]], h[edge[1]])
 
                 loss = loss_func(pos_out, neg_out)
+                print("loss:", loss)
                 loss.backward()
 
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
@@ -170,6 +171,9 @@ class Evaluation:
             edge = neg_valid_edge[perm].t()
             neg_valid_preds += [self.predictor(h[edge[0]], h[edge[1]]).squeeze().cpu()]
         neg_valid_pred = torch.cat(neg_valid_preds, dim=0)
+
+        if self.dataset_id == "ogbl-collab":
+            h = self.model(self.data.x, self.data.full_adj_t)
 
         pos_test_preds = []
         for perm in self.test_pos_dataloader:

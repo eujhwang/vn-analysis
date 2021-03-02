@@ -142,6 +142,24 @@ def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
         idx = torch.randperm(data_edge_dict['train']['edge'].size(0))
         idx = idx[:data_edge_dict['valid']['edge'].size(0)]
         data_edge_dict['eval_train'] = {'edge': data_edge_dict['train']['edge'][idx]}
+    elif dataset_id == "ogbl-collab":
+        dataset = PygLinkPropPredDataset(name=dataset_id, root=data_dir)
+        data = dataset[0] # Data(edge_index=[2, 42463862], x=[576289, 58])
+
+        edge_index = data.edge_index
+        data.edge_weight = data.edge_weight.view(-1).to(torch.float)
+        data = ToSparseTensor()(data, data.x.shape[0])
+
+        data_edge_dict = dataset.get_edge_split()
+
+        # Use training + validation edges for inference on test set.
+        if args.use_valedges_as_input:
+            val_edge_index = data_edge_dict['valid']['edge'].t()
+            full_edge_index = torch.cat([edge_index, val_edge_index], dim=-1)
+            data.full_adj_t = SparseTensor.from_edge_index(full_edge_index).t()
+            data.full_adj_t = data.full_adj_t.to_symmetric()
+        else:
+            data.full_adj_t = data.adj_t
 
     return data, data_edge_dict
 
