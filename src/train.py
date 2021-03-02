@@ -79,7 +79,6 @@ class Trainer:
                 neg_out = self.predictor(h[edge[0]], h[edge[1]])
 
                 loss = loss_func(pos_out, neg_out)
-                print("loss:", loss)
                 loss.backward()
 
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
