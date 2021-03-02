@@ -5,9 +5,10 @@ from model.mlp import MLP
 
 def init_model(args, data, dataset_id, outdim=None):
     model = None
-    input_dim = data.num_features
     if dataset_id == "ogbl-ddi":
         input_dim = args.hid_dim
+    else:
+        input_dim = data.num_features
 
     if outdim is None:
         outdim = args.hid_dim

@@ -17,11 +17,11 @@ def build_args(ident):
 def register_default_args(parser, ident):
     parser.add_argument('--device', type=int, default=0)
     parser.add_argument('--eval_steps', type=int, default=1)  # LEAVE 1 for now since logger not adapted for others yet
-    parser.add_argument('--lr', type=float, default=0.01)
+    parser.add_argument('--lr', type=float, default=0.005)
     parser.add_argument('--epochs', type=int, default=2000 if torch.cuda.is_available() else 10)  # ogbn-pro default
     parser.add_argument('--patience', default=100, type=int)  # ogbn-pro default
     # parser.add_argument('--batch_size', type=int, default=16 * 1024)  # currently ogbl-ppa only
-    parser.add_argument('--log_batch_size', type=int, default=14)  # currently ogbl-ppa only
+    parser.add_argument('--log_batch_size', type=int, default=16)  #ogbl-ppa: 14, ddi:16 only
     parser.add_argument('--data_dir', type=str, default="data")
 
     parser.add_argument('--model', type=str, default="gcn", choices=["gcn", "sage", "mlp"])

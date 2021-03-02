@@ -1,23 +1,12 @@
-import random
-import time
-
 import wandb
-from typing import Dict, Any
 
 import pandas as pd
-import os.path as osp
-from ogb.linkproppred import PygLinkPropPredDataset, Evaluator
 from torch import Tensor
-from torch.nn import Module
 from torch.utils.data import DataLoader
-import torch_geometric.transforms as T
-
-from tqdm import tqdm
 from model.mlp import LinkPredictor
 from train import Trainer, Evaluation
 from utils.parser import build_args
 from utils.utils import *
-from utils.logger import Logger
 from model.utils import init_model
 
 # necessary to flush on some nodes, setting it globally here
@@ -27,9 +16,11 @@ print = functools.partial(print, flush=True)
 
 def create_dataloader(data_edge_dict: Dict[str, Tensor], log_batch_size: int):
     pos_train_edge = data_edge_dict["train"]["edge"]
+    ################### sample only 50% of training data ###################
     rows = pos_train_edge.shape[0]
     rand_rows = torch.randperm(rows)[:int(rows/2)]
     sampled_pos_train_edge = pos_train_edge[rand_rows, :]
+    ########################################################################
 
     train_dataloader = DataLoader(range(sampled_pos_train_edge.size(0)), 2 ** log_batch_size, shuffle=True)
 
@@ -50,7 +41,7 @@ def setup(args):
     device = cuda_if_available(args.device)
     dataset_id = "ogbl-ppa"
     data_dir = Path(args.data_dir).expanduser()
-    data, data_edge_dict = create_dataset(dataset_id, data_dir)
+    data, data_edge_dict = create_dataset(args, dataset_id, data_dir)
 
     if args.train_idx:
         print(f"Using train_idx_{args.train_idx}")
@@ -98,6 +89,7 @@ def setup(args):
         early_stopping=early_stopping,
         epochs=args.epochs,
         eval_steps=args.eval_steps,
+        device=device,
     )
 
     return trainer

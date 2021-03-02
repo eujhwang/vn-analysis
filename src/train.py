@@ -9,6 +9,7 @@ from ogb.linkproppred import Evaluator
 from torch import Tensor
 from torch.nn import Module
 from torch.utils.data import DataLoader
+from torch_geometric.utils import negative_sampling
 from tqdm import tqdm
 
 from loss import loss_func
@@ -28,7 +29,7 @@ class Trainer:
         eval_steps:int,
         evaluation: Evaluation,
         early_stopping: Module,
-        emb=None, # ogbl-ddi
+        device: torch.device,
     ):
 
         self.dataset_id = dataset_id
@@ -43,18 +44,18 @@ class Trainer:
         self.early_stopping = early_stopping
         self.evaluation = evaluation
         self.prev_best = 0.0
-
-        # ogbl-ddi
-        if dataset_id == "ogbl-ddi":
-            self.emb = emb
-            torch.nn.init.xavier_uniform_(self.emb.weight)
+        self.device = device
 
     def train(self):
         print("Training start..")
 
         self.model.reset_parameters()
         self.predictor.reset_parameters()
-        pos_train_edge = self.data_edge_dict["train"]["edge"].to(self.data.x.device)
+        pos_train_edge = self.data_edge_dict["train"]["edge"].to(self.device)
+
+        if self.dataset_id == "ogbl-ddi":
+            row, col, _ = self.data.adj_t.coo()
+            edge_index = torch.stack([col, row], dim=0)
 
         for epoch in range(1, 1 + self.epochs):
             epoch_start_time = time.time()
@@ -71,7 +72,10 @@ class Trainer:
                 edge = pos_train_edge[perm].t()
                 pos_out = self.predictor(h[edge[0]], h[edge[1]])
 
-                edge = torch.randint(0, self.data.num_nodes, edge.size(), dtype=torch.long, device=h.device)
+                if self.dataset_id == "ogbl-ddi":
+                    edge = negative_sampling(edge_index, num_nodes=self.data.x.size(0), num_neg_samples=perm.size(0), method='dense')
+                else:
+                    edge = torch.randint(0, self.data.num_nodes, edge.size(), dtype=torch.long, device=h.device)
                 neg_out = self.predictor(h[edge[0]], h[edge[1]])
 
                 loss = loss_func(pos_out, neg_out)

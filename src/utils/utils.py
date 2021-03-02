@@ -123,7 +123,7 @@ def set_seed(seed: int):
         # torch.backends.cudnn.benchmark = True
 
 
-def create_dataset(dataset_id: str, data_dir: Union[Path, str]):
+def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
     if dataset_id == "ogbl-ppa":
         dataset = PygLinkPropPredDataset(name=dataset_id, root=data_dir)
         data = dataset[0] # Data(edge_index=[2, 42463862], x=[576289, 58])
@@ -134,6 +134,9 @@ def create_dataset(dataset_id: str, data_dir: Union[Path, str]):
     elif dataset_id == "ogbl-ddi":
         dataset = PygLinkPropPredDataset(name=dataset_id, root=data_dir, transform=T.ToSparseTensor())
         data = dataset[0] # Data(edge_index=[2, 42463862], x=[576289, 58])
+        emb = torch.nn.Embedding(data.num_nodes, args.hid_dim)
+        torch.nn.init.xavier_uniform_(emb.weight)
+        data.x = emb.weight
 
         data_edge_dict = dataset.get_edge_split()
         idx = torch.randperm(data_edge_dict['train']['edge'].size(0))
