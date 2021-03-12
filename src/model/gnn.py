@@ -1,8 +1,8 @@
 from typing import Optional
 import torch
 import torch.nn.functional as F
-from torch.nn import Sequential, Linear, ReLU
-from torch_geometric.nn import GCNConv, SAGEConv, GATConv, SGConv, GINConv
+from torch.nn import Sequential, Linear, ReLU, Conv2d
+from torch_geometric.nn import GCNConv, SAGEConv, GATConv, SGConv, GINConv, global_mean_pool, global_add_pool
 
 
 class GCN(torch.nn.Module):
@@ -87,7 +87,7 @@ class GAT(torch.nn.Module):
         self.convs = torch.nn.ModuleList()
         self.convs.append(GATConv(in_channels, hidden_channels, heads=heads))
         for _ in range(num_layers - 2):
-            self.convs.append(GATConv(hidden_channels*heads, hidden_channels*heads))
+            self.convs.append(GATConv(hidden_channels*heads, hidden_channels*heads, heads=heads))
         self.convs.append(GATConv(hidden_channels*heads, out_channels, heads=1))
         self.dropout = dropout
         print(self.convs)
@@ -105,48 +105,45 @@ class GAT(torch.nn.Module):
 
 
 class GIN(torch.nn.Module):
-    def __init__(self, in_channels, hidden_channels, out_channels, num_layers):
+    def __init__(self, in_channels, hidden_channels, num_layers, dropout, pool_type="add"):
         super().__init__()
         self.convs = torch.nn.ModuleList()
-        nn0 = Sequential(Linear(in_channels, hidden_channels), ReLU(), Linear(hidden_channels, hidden_channels))
-        self.convs.append(GINConv(nn0))
+        self.convs.append(
+            GINConv(
+                Sequential(
+                    Linear(in_channels, hidden_channels),
+                    ReLU(),
+                    Linear(hidden_channels, hidden_channels)
+                )
+            )
+        )
 
         for _ in range(num_layers-1):
-            nn = Sequential(Linear(hidden_channels, hidden_channels), ReLU(), Linear(hidden_channels, hidden_channels))
-            self.convs.append(GINConv(nn))
-
+            self.convs.append(
+                GINConv(
+                    Sequential(
+                        Linear(hidden_channels, hidden_channels),
+                        ReLU(),
+                        Linear(hidden_channels, hidden_channels)
+                    )
+                )
+            )
         self.bn = torch.nn.BatchNorm1d(hidden_channels)
-        self.fc1 = Linear(hidden_channels, hidden_channels)
-        self.fc2 = Linear(hidden_channels, out_channels)
+        self.dropout = dropout
+        self.pool_type = pool_type
 
     def reset_parameters(self):
         for conv in self.convs:
-            conv.reset_parameters()
+            if isinstance(conv, Linear):
+                conv.reset_parameters()
 
-
-    def global_add_pool(self, x, batch, size: Optional[int] = None):
-        r"""Returns batch-wise graph-level-outputs by adding node features
-        across the node dimension, so that for a single graph
-        :math:`\mathcal{G}_i` its output is computed by
-        .. math::
-            \mathbf{r}_i = \sum_{n=1}^{N_i} \mathbf{x}_n
-        Args:
-            x (Tensor): Node feature matrix
-                :math:`\mathbf{X} \in \mathbb{R}^{(N_1 + \ldots + N_B) \times F}`.
-            batch (LongTensor): Batch vector :math:`\mathbf{b} \in {\{ 0, \ldots,
-                B-1\}}^N`, which assigns each node to a specific example.
-            size (int, optional): Batch-size :math:`B`.
-                Automatically calculated if not given. (default: :obj:`None`)
-        :rtype: :class:`Tensor`
-        """
-        batch = batch.type(torch.LongTensor)
-        print("batch:", type(batch), batch.shape)
-        size = int(batch.max().item() + 1) if size is None else size
-        return torch.scatter(x, batch, dim=0, dim_size=size, reduce='add')
-
-    def forward(self, x, edge_index, batch=None):
+    def forward(self, x, adj_t, batch=None):
+        batch = torch.arange(0, x.shape[0]).to(x.device)
         for conv in self.convs:
-            x = F.relu(conv(x, edge_index))
+            x = conv(x, adj_t)
             x = self.bn(x)
-        # x = self.global_add_pool(x, batch)
+        if self.pool_type == "add":
+            x = global_add_pool(x, batch)
+        else:
+            x = global_mean_pool(x, batch)
         return x

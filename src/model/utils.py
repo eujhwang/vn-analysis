@@ -26,7 +26,7 @@ def init_model(args, data, dataset_id, outdim=None):
     elif args.model == "sgc":
         model = SGC(input_dim, args.hid_dim, outdim, args.layers, args.dropout, args.K)
     elif args.model == "gin":
-        model = GIN(input_dim, args.hid_dim, outdim, args.layers)
+        model = GIN(input_dim, args.hid_dim, args.layers, args.dropout)
     return model
 
 
