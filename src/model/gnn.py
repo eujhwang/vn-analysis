@@ -61,23 +61,16 @@ class SAGE(torch.nn.Module):
 class SGC(torch.nn.Module):
     def __init__(self, in_channels, hidden_channels, out_channels, num_layers, dropout, K):
         super(SGC, self).__init__()
-        self.convs = torch.nn.ModuleList()
-        self.convs.append(SGConv(in_channels, hidden_channels, K=K))
-        for _ in range(num_layers - 2):
-            self.convs.append(SGConv(hidden_channels, hidden_channels, K=K))
-        self.convs.append(SGConv(hidden_channels, out_channels, K=K))
+        self.conv = SGConv(in_channels, hidden_channels, K=K)
         self.dropout = dropout
 
     def reset_parameters(self):
-        for conv in self.convs:
-            conv.reset_parameters()
+        self.conv.reset_parameters()
 
     def forward(self, x, adj_t):
-        for conv in self.convs[:-1]:
-            x = conv(x, adj_t)
-            x = F.relu(x)
-            x = F.dropout(x, p=self.dropout, training=self.training)
-        x = self.convs[-1](x, adj_t)
+        x = self.conv(x, adj_t)
+        x = F.relu(x)
+        x = F.dropout(x, p=self.dropout, training=self.training)
         return x
 
 

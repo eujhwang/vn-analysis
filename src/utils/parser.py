@@ -23,14 +23,14 @@ def register_default_args(parser, ident):
     parser.add_argument('--log_batch_size', type=int, default=14)  #ogbl-ppa: 14, ddi:16 only
     parser.add_argument('--data_dir', type=str, default="data")
 
-    parser.add_argument('--model', type=str, default="sgc", choices=["gcn", "sage", "mlp", "gat", "sgc", "gin"])
+    parser.add_argument('--model', type=str, default="gin", choices=["gcn", "sage", "mlp", "gat", "sgc", "gin"])
     parser.add_argument('--layers', type=int, default=2)
     parser.add_argument('--hid_dim', type=int, default=64)
     parser.add_argument('--dropout', type=float, default=0.0)
 
     parser.add_argument('--seed', type=int, default=random.randint(0, 2 ** 32), help="seed for random number generator")
 
-    parser.add_argument('--train_idx', type=str, default="train01",
+    parser.add_argument('--train_idx', type=str, default="train20",
                         help="train_idx files for ogbl-ppa. train50 : 50% of train data")
 
     # ogbl-ppa-SGC
