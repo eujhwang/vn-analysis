@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import datetime
+from pathlib import Path
 from typing import *
 
 import torch
@@ -22,6 +24,7 @@ class Trainer:
         data: Any,
         data_edge_dict: Dict[str, Tensor],
         model: Module,
+        model_type: str,
         predictor: Module,
         train_dataloader: DataLoader,
         optimizer: torch.optim.Optimizer,
@@ -30,12 +33,14 @@ class Trainer:
         evaluation: Evaluation,
         early_stopping: Module,
         device: torch.device,
+        wandb_id: str,
     ):
 
         self.dataset_id = dataset_id
         self.data = data
         self.data_edge_dict = data_edge_dict
         self.model = model
+        self.model_type = model_type
         self.predictor = predictor
         self.train_dataloader = train_dataloader
         self.opt = optimizer
@@ -43,21 +48,32 @@ class Trainer:
         self.eval_steps = eval_steps
         self.early_stopping = early_stopping
         self.evaluation = evaluation
-        self.prev_best = 0.0
+        self.best_score = 0.0
         self.device = device
+        self.best_epoch = -1
+
+        timestamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d%H%M%S')
+        self.model_save_dir = "./saved_model/"
+        Path(self.model_save_dir).mkdir(parents=True, exist_ok=True)
+        self.model_save_path = self.model_save_dir + f"{dataset_id}_{timestamp}_{wandb_id}.pt"
+
+    def update_save_best_score(self, score: float, epoch: int):
+        if self.best_score < score:
+            self.best_score = score
+            self.best_epoch = epoch
+            torch.save(self.model, self.model_save_path)
+            print("model is saved here: %s, best epoch: %s, best f1 score: %f"
+                  % (self.model_save_path, self.best_epoch, self.best_score))
 
     def train(self):
         print("Training start..")
 
         self.model.reset_parameters()
         self.predictor.reset_parameters()
-        pos_train_edge = self.data_edge_dict["train"]["edge"].to(self.device)
-
-        if self.dataset_id == "ogbl-ddi":
-            row, col, _ = self.data.adj_t.coo()
-            edge_index = torch.stack([col, row], dim=0)
+        pos_train_edge = self.data_edge_dict["train"]["edge"].to(self.device) # shape: [21231931, 2]
 
         for epoch in range(1, 1 + self.epochs):
+            print("\n===================== Epoch (%d / %d) =====================" % (epoch, self.epochs))
             epoch_start_time = time.time()
             self.model.train()
             self.predictor.train()
@@ -72,10 +88,7 @@ class Trainer:
                 edge = pos_train_edge[perm].t()
                 pos_out = self.predictor(h[edge[0]], h[edge[1]])
 
-                if self.dataset_id == "ogbl-ddi":
-                    edge = negative_sampling(edge_index, num_nodes=self.data.x.size(0), num_neg_samples=perm.size(0), method='dense')
-                else:
-                    edge = torch.randint(0, self.data.num_nodes, edge.size(), dtype=torch.long, device=h.device)
+                edge = torch.randint(0, self.data.num_nodes, edge.size(), dtype=torch.long, device=h.device)
                 neg_out = self.predictor(h[edge[0]], h[edge[1]])
 
                 loss = loss_func(pos_out, neg_out)
@@ -102,21 +115,19 @@ class Trainer:
 
             if epoch % self.eval_steps == 0:
                 metrics = self.evaluation.evaluate(pos_train_pred)
+                self.update_save_best_score(metrics["[Valid] Hits@100"], epoch)
+                metrics["[Valid] Best Hits@100"] = self.best_score
                 print("metrics", metrics)
-
-                if self.dataset_id == "ogbl-ppa":
-                    if self.prev_best < metrics["[Valid] Hits@100"]:
-                        self.prev_best = metrics["[Valid] Hits@100"]
-                elif self.dataset_id == "ogbl-ddi":
-                    if self.prev_best < metrics["[Valid] Hits@20"]:
-                        self.prev_best = metrics["[Valid] Hits@20"]
-                elif self.dataset_id == "ogbl-collab":
-                    if self.prev_best < metrics["[Valid] Hits@50"]:
-                        self.prev_best = metrics["[Valid] Hits@50"]
-
                 wandb.log(metrics, commit=False)
-                self.early_stopping(self.prev_best)
+                self.early_stopping(self.best_score)
             wandb.log({})
+
+        metrics = self.evaluation.evaluate(pos_train_pred)
+        self.update_save_best_score(metrics["[Valid] Hits@100"], epoch)
+        metrics["[Valid] Best Hits@100"] = self.best_score
+        print("metrics", metrics)
+        wandb.log(metrics, commit=False)
+        wandb.log({})
         print("done!")
 
 
@@ -171,9 +182,6 @@ class Evaluation:
             neg_valid_preds += [self.predictor(h[edge[0]], h[edge[1]]).squeeze().cpu()]
         neg_valid_pred = torch.cat(neg_valid_preds, dim=0)
 
-        if self.dataset_id == "ogbl-collab":
-            h = self.model(self.data.x, self.data.full_adj_t)
-
         pos_test_preds = []
         for perm in self.test_pos_dataloader:
             edge = pos_test_edge[perm].t()
@@ -187,7 +195,7 @@ class Evaluation:
         neg_test_pred = torch.cat(neg_test_preds, dim=0)
 
         results = {}
-        for K in [10, 20, 30, 50, 100]:
+        for K in [10, 50, 100]:
             self._evaulator.K = K
             # dummy train, using valid
             train_hits = self._evaulator.eval({

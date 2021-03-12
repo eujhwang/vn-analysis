@@ -1,3 +1,4 @@
+import logging
 import os
 import random
 import warnings
@@ -5,10 +6,10 @@ from pathlib import Path
 from typing import *
 
 import torch
-from ogb.linkproppred import PygLinkPropPredDataset
+from ogb.linkproppred import PygLinkPropPredDataset, LinkPropPredDataset
 from torch_sparse import SparseTensor
 import torch_geometric.transforms as T
-
+import pandas as pd
 
 class ToSparseTensor(object):
     r"""Converts the :obj:`edge_index` attribute of a data object into a
@@ -126,42 +127,48 @@ def set_seed(seed: int):
 def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
     if dataset_id == "ogbl-ppa":
         dataset = PygLinkPropPredDataset(name=dataset_id, root=data_dir)
+        # x: 576289 rows, each 58 dimension, edge_index: [191305, 261775] tensor 가 42463862 개
         data = dataset[0] # Data(edge_index=[2, 42463862], x=[576289, 58])
+        data_edge_dict = dataset.get_edge_split()
+
+        if args.train_idx:
+            print(f"Using train_idx_{args.train_idx}")
+            train_idx = pd.read_csv(os.path.join(data_dir, "{}_idx".format(dataset_id), args.train_idx + ".csv.gz"),
+                                    compression="gzip", header=None).values.T[0]
+            data_edge_dict['train']['edge'] = data_edge_dict['train']['edge'][train_idx]
+            train_idx1 = [i * 2 for i in train_idx] + [(i * 2) + 1 for i in train_idx]
+            data.edge_index = data.edge_index[:, train_idx1]
 
         data.x = data.x.to(torch.float)
         data = ToSparseTensor()(data, data.x.shape[0])
-        data_edge_dict = dataset.get_edge_split()
-    elif dataset_id == "ogbl-ddi":
-        dataset = PygLinkPropPredDataset(name=dataset_id, root=data_dir, transform=T.ToSparseTensor())
-        data = dataset[0] # Data(edge_index=[2, 42463862], x=[576289, 58])
-        emb = torch.nn.Embedding(data.num_nodes, args.hid_dim)
-        torch.nn.init.xavier_uniform_(emb.weight)
-        data.x = emb.weight
-
-        data_edge_dict = dataset.get_edge_split()
-        idx = torch.randperm(data_edge_dict['train']['edge'].size(0))
-        idx = idx[:data_edge_dict['valid']['edge'].size(0)]
-        data_edge_dict['eval_train'] = {'edge': data_edge_dict['train']['edge'][idx]}
-    elif dataset_id == "ogbl-collab":
-        dataset = PygLinkPropPredDataset(name=dataset_id, root=data_dir)
-        data = dataset[0] # Data(edge_index=[2, 42463862], x=[576289, 58])
-
-        edge_index = data.edge_index
-        data.edge_weight = data.edge_weight.view(-1).to(torch.float)
-        data = ToSparseTensor()(data, data.x.shape[0])
-
-        data_edge_dict = dataset.get_edge_split()
-
-        # Use training + validation edges for inference on test set.
-        if args.use_valedges_as_input:
-            val_edge_index = data_edge_dict['valid']['edge'].t()
-            full_edge_index = torch.cat([edge_index, val_edge_index], dim=-1)
-            data.full_adj_t = SparseTensor.from_edge_index(full_edge_index).t()
-            data.full_adj_t = data.full_adj_t.to_symmetric()
-        else:
-            data.full_adj_t = data.adj_t
 
     return data, data_edge_dict
+
+
+def set_logger(args):
+    '''
+    Write logs to checkpoint and console
+    '''
+
+    if args.do_train:
+        log_file = os.path.join(args.save_path or args.init_checkpoint, 'train.log')
+    else:
+        log_file = os.path.join(args.save_path or args.init_checkpoint, 'test.log')
+
+    logging.basicConfig(
+        format='%(asctime)s %(levelname)-8s %(message)s',
+        level=logging.INFO,
+        datefmt='%Y-%m-%d %H:%M:%S',
+        filename=log_file,
+        filemode='w'
+    )
+
+    if args.print_on_screen:
+        console = logging.StreamHandler()
+        console.setLevel(logging.INFO)
+        formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s')
+        console.setFormatter(formatter)
+        logging.getLogger('').addHandler(console)
 
 
 class EarlyStoppingException(Exception):
