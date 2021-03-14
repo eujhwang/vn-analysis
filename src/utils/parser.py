@@ -36,6 +36,9 @@ def register_default_args(parser, ident):
     # ogbl-ppa-SGC
     parser.add_argument('--K', type=int, default=1, help="K hop for SGC")
 
+    # ogbl-ppa-GIN
+    parser.add_argument('--pool_type', type=str, default="add", help="pooling type")
+
     # LinkPredictor uses lp_layers
     parser.add_argument('--lp_layers', type=int, default=3)
 

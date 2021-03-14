@@ -83,7 +83,6 @@ class GAT(torch.nn.Module):
             self.convs.append(GATConv(hidden_channels*heads, hidden_channels*heads, heads=heads))
         self.convs.append(GATConv(hidden_channels*heads, out_channels, heads=1))
         self.dropout = dropout
-        print(self.convs)
 
     def reset_parameters(self):
         for conv in self.convs:
@@ -130,7 +129,7 @@ class GIN(torch.nn.Module):
             if isinstance(conv, Linear):
                 conv.reset_parameters()
 
-    def forward(self, x, adj_t, batch=None):
+    def forward(self, x, adj_t):
         batch = torch.arange(0, x.shape[0]).to(x.device)
         for conv in self.convs:
             x = conv(x, adj_t)
