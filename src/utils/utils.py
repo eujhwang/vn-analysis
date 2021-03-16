@@ -141,6 +141,21 @@ def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
 
         data.x = data.x.to(torch.float)
         data = ToSparseTensor()(data, data.x.shape[0])
+    elif dataset_id == "ogbl-collab":
+        dataset = PygLinkPropPredDataset(name='ogbl-collab')
+        data = dataset[0]
+        edge_index = data.edge_index
+        data.edge_weight = data.edge_weight.view(-1).to(torch.float)
+        data = T.ToSparseTensor()(data)
+        data_edge_dict = dataset.get_edge_split()
+
+        if args.use_valedges_as_input:
+            val_edge_index = data_edge_dict["valid"]["edge"].t()
+            full_edge_index = torch.cat([edge_index, val_edge_index], dim=-1)
+            data.full_adj_t = SparseTensor.from_edge_index(full_edge_index).t()
+            data.full_adj_t = data.full_adj_t.to_symmetric()
+        else:
+            data.full_adj_t = data.adj_t
 
     return data, data_edge_dict
 

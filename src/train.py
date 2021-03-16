@@ -182,6 +182,9 @@ class Evaluation:
             neg_valid_preds += [self.predictor(h[edge[0]], h[edge[1]]).squeeze().cpu()]
         neg_valid_pred = torch.cat(neg_valid_preds, dim=0)
 
+        if self.dataset_id == "ogbl-collab":
+            h = self.model(self.data.x, self.data.full_adj_t)
+
         pos_test_preds = []
         for perm in self.test_pos_dataloader:
             edge = pos_test_edge[perm].t()

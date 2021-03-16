@@ -23,7 +23,7 @@ def register_default_args(parser, ident):
     parser.add_argument('--log_batch_size', type=int, default=14)  #ogbl-ppa: 14, ddi:16 only
     parser.add_argument('--data_dir', type=str, default="data")
 
-    parser.add_argument('--model', type=str, default="gin", choices=["gcn", "sage", "mlp", "gat", "sgc", "gin"])
+    parser.add_argument('--model', type=str, default="mlp", choices=["mlp", "gcn", "sage", "mlp", "gat", "sgc", "gin"])
     parser.add_argument('--layers', type=int, default=2)
     parser.add_argument('--hid_dim', type=int, default=64)
     parser.add_argument('--dropout', type=float, default=0.0)
@@ -47,7 +47,7 @@ def register_default_args(parser, ident):
     parser.add_argument('--heads', type=int, default=5)
 
     # ogbl-collab uses node_embedding
-    parser.add_argument('--use_valedges_as_input', action='store_true')
+    parser.add_argument('--use_valedges_as_input', type=int, default=0, help="0: false, 1: true")
 
 
     # parser.add_argument('--use_node_embedding', type=int, default=0, choices=[0, 1])  # for mlp
