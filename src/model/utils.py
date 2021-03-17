@@ -17,7 +17,6 @@ def init_model(args, data, dataset_id, outdim=None):
     elif args.model == "sage":
         model = SAGE(data.num_features, args.hid_dim, outdim,
                      args.layers, args.dropout)
-        precompute_norm(data)
     elif args.model == "gcn":
         model = GCN(data.num_features, args.hid_dim, outdim,
                     args.layers, args.dropout)
