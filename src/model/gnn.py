@@ -6,17 +6,17 @@ from torch_geometric.nn import GCNConv, SAGEConv, GATConv, SGConv, GINConv, glob
 
 
 class GCN(torch.nn.Module):
-    def __init__(self, in_channels, hidden_channels, out_channels, num_layers, dropout):
+    def __init__(self, in_channels, hidden_channels, out_channels, num_layers, dropout, normalize=True, cached=False):
         super(GCN, self).__init__()
 
         self.convs = torch.nn.ModuleList()
         self.convs.append(
-            GCNConv(in_channels, hidden_channels, normalize=False))
+            GCNConv(in_channels, hidden_channels, normalize=normalize, cached=cached))
         for _ in range(num_layers - 2):
             self.convs.append(
-                GCNConv(hidden_channels, hidden_channels, normalize=False))
+                GCNConv(hidden_channels, hidden_channels, normalize=normalize, cached=cached))
         self.convs.append(
-            GCNConv(hidden_channels, out_channels, normalize=False))
+            GCNConv(hidden_channels, out_channels, normalize=normalize, cached=cached))
 
         self.dropout = dropout
 

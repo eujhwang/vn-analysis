@@ -115,8 +115,13 @@ class Trainer:
 
             if epoch % self.eval_steps == 0:
                 metrics = self.evaluation.evaluate(pos_train_pred)
-                self.update_save_best_score(metrics["[Valid] Hits@100"], epoch)
-                metrics["[Valid] Best Hits@100"] = self.best_score
+
+                if self.dataset_id == "ogbl-ppa":
+                    self.update_save_best_score(metrics["[Valid] Hits@100"], epoch)
+                    metrics["[Valid] Best Hits@100"] = self.best_score
+                elif self.dataset_id == "ogbl-collab":
+                    self.update_save_best_score(metrics["[Valid] Hits@50"], epoch)
+                    metrics["[Valid] Best Hits@50"] = self.best_score
                 print("metrics", metrics)
                 wandb.log(metrics, commit=False)
                 self.early_stopping(self.best_score)

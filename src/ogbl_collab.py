@@ -83,7 +83,7 @@ def setup(args):
 
 
 def main():
-    args = build_args("ppa")
+    args = build_args("collab")
     print("args:", args)
     assert args.model  # must not be empty for node property prediction
     set_seed(args.seed)
