@@ -100,6 +100,8 @@ class GIN(torch.nn.Module):
     def __init__(self, in_channels, hidden_channels, num_layers, dropout, pool_type="add"):
         super().__init__()
         self.convs = torch.nn.ModuleList()
+        self.batch_norms = torch.nn.ModuleList()
+
         self.convs.append(
             GINConv(
                 Sequential(
@@ -109,6 +111,7 @@ class GIN(torch.nn.Module):
                 )
             )
         )
+        self.batch_norms.append(torch.nn.BatchNorm1d(hidden_channels))
 
         for _ in range(num_layers-1):
             self.convs.append(
@@ -120,7 +123,8 @@ class GIN(torch.nn.Module):
                     )
                 )
             )
-        self.bn = torch.nn.BatchNorm1d(hidden_channels)
+            self.batch_norms.append(torch.nn.BatchNorm1d(hidden_channels))
+
         self.dropout = dropout
         self.pool_type = pool_type
 
@@ -131,9 +135,9 @@ class GIN(torch.nn.Module):
 
     def forward(self, x, adj_t):
         batch = torch.arange(0, x.shape[0]).to(x.device)
-        for conv in self.convs:
+        for i, conv in enumerate(self.convs):
             x = conv(x, adj_t)
-            x = self.bn(x)
+            x = self.batch_norms[i](x)
         if self.pool_type == "add":
             x = global_add_pool(x, batch)
         else:
