@@ -97,7 +97,7 @@ class GAT(torch.nn.Module):
 
 
 class GIN(torch.nn.Module):
-    def __init__(self, in_channels, hidden_channels, num_layers, dropout, pool_type="add"):
+    def __init__(self, in_channels, hidden_channels, num_layers, dropout):
         super().__init__()
         self.convs = torch.nn.ModuleList()
         self.batch_norms = torch.nn.ModuleList()
@@ -126,7 +126,6 @@ class GIN(torch.nn.Module):
             self.batch_norms.append(torch.nn.BatchNorm1d(hidden_channels))
 
         self.dropout = dropout
-        self.pool_type = pool_type
 
     def reset_parameters(self):
         for conv in self.convs:
@@ -134,14 +133,21 @@ class GIN(torch.nn.Module):
                 conv.reset_parameters()
 
     def forward(self, x, adj_t):
-        batch = torch.arange(0, x.shape[0]).to(x.device)
         for i, conv in enumerate(self.convs):
             x = conv(x, adj_t)
             x = F.relu(x)
             x = self.batch_norms[i](x)
-        if self.pool_type == "add":
-            x = global_add_pool(x, batch)
-        else:
-            x = global_mean_pool(x, batch)
         x = F.dropout(x, p=self.dropout, training=self.training)
         return x
+
+
+# class GCN_Virtual(torch.nn.Module):
+#     def __init__(self, in_channels, hidden_channels, out_channels, num_layers, dropout, normalize=True, cached=False):
+#         super().__init__()
+#         ### set the initial virtual node embedding to 0.
+#         self.virtual_node = torch.nn.Embedding(1, hidden_channels)
+#         torch.nn.init.constant_(self.virtual_node.weight.data, 0)
+#
+#     def reset_parameters(self):
+#
+#     def forward(self, x, adj_t):
