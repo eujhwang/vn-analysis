@@ -137,9 +137,11 @@ class GIN(torch.nn.Module):
         batch = torch.arange(0, x.shape[0]).to(x.device)
         for i, conv in enumerate(self.convs):
             x = conv(x, adj_t)
+            x = F.relu(x)
             x = self.batch_norms[i](x)
         if self.pool_type == "add":
             x = global_add_pool(x, batch)
         else:
             x = global_mean_pool(x, batch)
+        x = F.dropout(x, p=self.dropout, training=self.training)
         return x
