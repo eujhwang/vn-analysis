@@ -1,7 +1,7 @@
 from typing import Optional
 import torch
 import torch.nn.functional as F
-from torch.nn import Sequential, Linear, ReLU, Conv2d
+from torch.nn import Sequential, Linear, ReLU, Conv2d, BatchNorm1d
 from torch_geometric.nn import GCNConv, SAGEConv, GATConv, SGConv, GINConv, global_mean_pool, global_add_pool
 
 
@@ -141,13 +141,83 @@ class GIN(torch.nn.Module):
         return x
 
 
-# class GCN_Virtual(torch.nn.Module):
-#     def __init__(self, in_channels, hidden_channels, out_channels, num_layers, dropout, normalize=True, cached=False):
-#         super().__init__()
-#         ### set the initial virtual node embedding to 0.
-#         self.virtual_node = torch.nn.Embedding(1, hidden_channels)
-#         torch.nn.init.constant_(self.virtual_node.weight.data, 0)
-#
-#     def reset_parameters(self):
-#
-#     def forward(self, x, adj_t):
+class GCN_Virtual(torch.nn.Module):
+    def __init__(self, in_channels, hidden_channels, out_channels, num_layers, dropout, JK="last", normalize=True, cached=False):
+        super().__init__()
+        self.num_layers = num_layers
+        self.convs = torch.nn.ModuleList()
+        self.batch_norms = torch.nn.ModuleList()
+        self.convs.append(
+            GCNConv(in_channels, hidden_channels, normalize=normalize, cached=cached))
+        self.batch_norms.append(BatchNorm1d(hidden_channels))
+        for _ in range(num_layers - 2):
+            self.convs.append(
+                GCNConv(hidden_channels, hidden_channels, normalize=normalize, cached=cached))
+            self.batch_norms.append(BatchNorm1d(hidden_channels))
+        self.convs.append(
+            GCNConv(hidden_channels, out_channels, normalize=normalize, cached=cached))
+        self.batch_norms.append(BatchNorm1d(out_channels))
+
+        ### set the initial virtual node embedding to 0.
+        self.virtual_node = torch.nn.Embedding(1, in_channels)
+        torch.nn.init.constant_(self.virtual_node.weight.data, 0)
+
+        self.virtual_node_mlp = torch.nn.ModuleList()
+        self.virtual_node_mlp.append(
+            Sequential(
+                Linear(in_channels, 2 * hidden_channels),
+                ReLU(),
+                Linear(2 * hidden_channels, hidden_channels),
+                ReLU(),
+            )
+        )
+        for layer in range(num_layers-2):
+            self.virtual_node_mlp.append(
+                Sequential(
+                    Linear(hidden_channels, 2*hidden_channels),
+                    ReLU(),
+                    Linear(2*hidden_channels, hidden_channels),
+                    ReLU(),
+                )
+            )
+        self.JK = JK
+        self.dropout = dropout
+
+    def reset_parameters(self):
+        for conv in self.convs:
+            conv.reset_parameters()
+
+    def forward(self, x, adj_t):
+        """
+        x:              [# of nodes, # of features]
+        adj_t:          [# of nodes, # of nodes]
+        virtual_node:   [1, # of features]
+        """
+        # initialize virtual node to zero
+        virtual_node = self.virtual_node(torch.zeros(1).to(torch.long).to(x.device))
+
+        embs = [x]
+        for layer in range(self.num_layers):
+            new_x = embs[layer] + virtual_node      # add message from virtual node
+            new_x = self.convs[layer](new_x, adj_t) # GCN layer
+            new_x = self.batch_norms[layer](new_x)  # do we need batch norm?
+            new_x = F.relu(new_x)
+            new_x = F.dropout(new_x, p=self.dropout, training=self.training)
+
+            embs.append(new_x)
+            # update virtual node
+            if layer < self.num_layers-1:
+                # create a node that contains all graph nodes information
+                # virtual_node_tmp: [1, # of features], virtual_node: [1, # of features]
+                virtual_node_tmp = global_add_pool(embs[layer], torch.zeros(1, dtype=torch.int64, device=x.device)) + virtual_node
+                virtual_node = self.virtual_node_mlp[layer](virtual_node_tmp)   # mlp layer
+                virtual_node = F.dropout(virtual_node, self.dropout, training=self.training)
+
+
+        if self.JK == "last":
+            emb = embs[-1]
+        elif self.JK == "sum":
+            emb = 0
+            for layer in range(self.num_layers):
+                emb += embs[layer]
+        return emb
