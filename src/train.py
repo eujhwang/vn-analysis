@@ -61,7 +61,7 @@ class Trainer:
         if self.best_score < score:
             self.best_score = score
             self.best_epoch = epoch
-            torch.save(self.model, self.model_save_path)
+            torch.save(self.model.state_dict(), self.model_save_path)
             print("model is saved here: %s, best epoch: %s, best f1 score: %f"
                   % (self.model_save_path, self.best_epoch, self.best_score))
 
