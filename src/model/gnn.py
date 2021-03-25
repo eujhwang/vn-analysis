@@ -213,11 +213,10 @@ class GCN_Virtual(torch.nn.Module):
                 virtual_node = self.virtual_node_mlp[layer](virtual_node_tmp)   # mlp layer
                 virtual_node = F.dropout(virtual_node, self.dropout, training=self.training)
 
-
         if self.JK == "last":
             emb = embs[-1]
         elif self.JK == "sum":
             emb = 0
-            for layer in range(self.num_layers):
+            for layer in range(1, self.num_layers):
                 emb += embs[layer]
         return emb
