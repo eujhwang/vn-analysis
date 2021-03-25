@@ -142,7 +142,7 @@ class GIN(torch.nn.Module):
 
 
 class GCN_Virtual(torch.nn.Module):
-    def __init__(self, in_channels, hidden_channels, out_channels, num_layers, dropout, JK="last", normalize=True, cached=False):
+    def __init__(self, in_channels, hidden_channels, out_channels, num_layers, dropout, use_batch_norm=1, JK="last", normalize=True, cached=False):
         super().__init__()
         self.num_layers = num_layers
         self.convs = torch.nn.ModuleList()
@@ -180,6 +180,7 @@ class GCN_Virtual(torch.nn.Module):
                     ReLU(),
                 )
             )
+        self.use_batch_norm = use_batch_norm
         self.JK = JK
         self.dropout = dropout
 
@@ -200,7 +201,8 @@ class GCN_Virtual(torch.nn.Module):
         for layer in range(self.num_layers):
             new_x = embs[layer] + virtual_node      # add message from virtual node
             new_x = self.convs[layer](new_x, adj_t) # GCN layer
-            new_x = self.batch_norms[layer](new_x)  # do we need batch norm?
+            if self.use_batch_norm:
+                new_x = self.batch_norms[layer](new_x)  # do we need batch norm?
             new_x = F.relu(new_x)
             new_x = F.dropout(new_x, p=self.dropout, training=self.training)
 
