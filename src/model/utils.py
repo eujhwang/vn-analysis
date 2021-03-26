@@ -31,7 +31,7 @@ def init_model(args, data, dataset_id, outdim=None):
         model = GIN(input_dim, args.hid_dim, args.layers, args.dropout)
     elif args.model == "gcn-v":
         model = GCN_Virtual(input_dim, args.hid_dim, outdim, args.layers, args.dropout,
-                            use_batch_norm=args.use_batch_norm, JK=args.JK, normalize=False, cached=False)
+                            activation=args.activation, JK=args.JK, normalize=False, cached=False)
     return model
 
 

@@ -36,7 +36,7 @@ def register_default_args(parser, ident):
     # ogbl-ppa-SGC
     parser.add_argument('--K', type=int, default=1, help="K hop for SGC")
     parser.add_argument('--JK', type=str, default="last", help="JK aggregation for gcn w/ virtual node")
-    parser.add_argument('--use_batch_norm', type=int, default=1, help="whether to use batch norm or not. 1: True, 0: False")
+    parser.add_argument('--activation', type=str, default="relu", help="activation layer for gnn-v relu: ReLU, leaky: LeakyReLU")
 
     # LinkPredictor uses lp_layers
     parser.add_argument('--lp_layers', type=int, default=3)

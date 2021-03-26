@@ -1,7 +1,7 @@
 from typing import Optional
 import torch
 import torch.nn.functional as F
-from torch.nn import Sequential, Linear, ReLU, Conv2d, BatchNorm1d
+from torch.nn import Sequential, Linear, ReLU, Conv2d, BatchNorm1d, LeakyReLU
 from torch_geometric.nn import GCNConv, SAGEConv, GATConv, SGConv, GINConv, global_mean_pool, global_add_pool
 
 
@@ -142,7 +142,7 @@ class GIN(torch.nn.Module):
 
 
 class GCN_Virtual(torch.nn.Module):
-    def __init__(self, in_channels, hidden_channels, out_channels, num_layers, dropout, use_batch_norm=1, JK="last", normalize=True, cached=False):
+    def __init__(self, in_channels, hidden_channels, out_channels, num_layers, dropout, activation="relu", JK="last", normalize=True, cached=False):
         super().__init__()
         self.num_layers = num_layers
         self.convs = torch.nn.ModuleList()
@@ -163,24 +163,42 @@ class GCN_Virtual(torch.nn.Module):
         torch.nn.init.constant_(self.virtual_node.weight.data, 0)
 
         self.virtual_node_mlp = torch.nn.ModuleList()
-        self.virtual_node_mlp.append(
-            Sequential(
-                Linear(in_channels, 2 * hidden_channels),
-                ReLU(),
-                Linear(2 * hidden_channels, hidden_channels),
-                ReLU(),
-            )
-        )
-        for layer in range(num_layers-2):
+        if activation == "relu":
             self.virtual_node_mlp.append(
                 Sequential(
-                    Linear(hidden_channels, 2*hidden_channels),
+                    Linear(in_channels, 2 * hidden_channels),
                     ReLU(),
-                    Linear(2*hidden_channels, hidden_channels),
+                    Linear(2 * hidden_channels, hidden_channels),
                     ReLU(),
                 )
             )
-        self.use_batch_norm = use_batch_norm
+            for layer in range(num_layers-2):
+                self.virtual_node_mlp.append(
+                    Sequential(
+                        Linear(hidden_channels, 2*hidden_channels),
+                        ReLU(),
+                        Linear(2*hidden_channels, hidden_channels),
+                        ReLU(),
+                    )
+                )
+        elif activation == "leaky":
+            self.virtual_node_mlp.append(
+                Sequential(
+                    Linear(in_channels, 2 * hidden_channels),
+                    LeakyReLU(),
+                    Linear(2 * hidden_channels, hidden_channels),
+                    LeakyReLU(),
+                )
+            )
+            for layer in range(num_layers-2):
+                self.virtual_node_mlp.append(
+                    Sequential(
+                        Linear(hidden_channels, 2*hidden_channels),
+                        LeakyReLU(),
+                        Linear(2*hidden_channels, hidden_channels),
+                        LeakyReLU(),
+                    )
+                )
         self.JK = JK
         self.dropout = dropout
 
@@ -201,8 +219,7 @@ class GCN_Virtual(torch.nn.Module):
         for layer in range(self.num_layers):
             new_x = embs[layer] + virtual_node      # add message from virtual node
             new_x = self.convs[layer](new_x, adj_t) # GCN layer
-            if self.use_batch_norm:
-                new_x = self.batch_norms[layer](new_x)  # do we need batch norm?
+            new_x = self.batch_norms[layer](new_x)
             new_x = F.relu(new_x)
             new_x = F.dropout(new_x, p=self.dropout, training=self.training)
 
