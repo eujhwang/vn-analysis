@@ -1,7 +1,7 @@
 from typing import Optional
 import torch
 import torch.nn.functional as F
-from torch.nn import Sequential, Linear, ReLU, Conv2d, BatchNorm1d, LeakyReLU
+from torch.nn import Sequential, Linear, ReLU, Conv2d, BatchNorm1d, LeakyReLU, Softplus, ELU
 from torch_geometric.nn import GCNConv, SAGEConv, GATConv, SGConv, GINConv, global_mean_pool, global_add_pool
 
 
@@ -164,41 +164,34 @@ class GCN_Virtual(torch.nn.Module):
 
         self.virtual_node_mlp = torch.nn.ModuleList()
         if activation == "relu":
-            self.virtual_node_mlp.append(
-                Sequential(
-                    Linear(in_channels, 2 * hidden_channels),
-                    ReLU(),
-                    Linear(2 * hidden_channels, hidden_channels),
-                    ReLU(),
-                )
-            )
-            for layer in range(num_layers-2):
-                self.virtual_node_mlp.append(
-                    Sequential(
-                        Linear(hidden_channels, 2*hidden_channels),
-                        ReLU(),
-                        Linear(2*hidden_channels, hidden_channels),
-                        ReLU(),
-                    )
-                )
+            activation_layer = ReLU()
         elif activation == "leaky":
+            activation_layer = LeakyReLU()
+        elif activation == "softplus":
+            activation_layer = Softplus()
+        elif activation == "elu":
+            activation_layer = ELU()
+        else:
+            raise ValueError(f"{activation} is unsupported at this time!")
+
+        self.virtual_node_mlp.append(
+            Sequential(
+                Linear(in_channels, 2 * hidden_channels),
+                activation_layer,
+                Linear(2 * hidden_channels, hidden_channels),
+                activation_layer,
+            )
+        )
+        for layer in range(num_layers-2):
             self.virtual_node_mlp.append(
                 Sequential(
-                    Linear(in_channels, 2 * hidden_channels),
-                    LeakyReLU(),
-                    Linear(2 * hidden_channels, hidden_channels),
-                    LeakyReLU(),
+                    Linear(hidden_channels, 2*hidden_channels),
+                    activation_layer,
+                    Linear(2*hidden_channels, hidden_channels),
+                    activation_layer,
                 )
             )
-            for layer in range(num_layers-2):
-                self.virtual_node_mlp.append(
-                    Sequential(
-                        Linear(hidden_channels, 2*hidden_channels),
-                        LeakyReLU(),
-                        Linear(2*hidden_channels, hidden_channels),
-                        LeakyReLU(),
-                    )
-                )
+
         self.JK = JK
         self.dropout = dropout
 
