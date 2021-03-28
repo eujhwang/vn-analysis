@@ -1,5 +1,5 @@
 import torch
-from model.gnn import GCN, SAGE, GAT, SGC, GIN, GCN_Virtual
+from model.gnn import GCN, SAGE, GAT, SGC, GIN, GCN_Virtual, SAGE_Virtual
 from model.mlp import MLP
 
 
@@ -32,6 +32,9 @@ def init_model(args, data, dataset_id, outdim=None):
     elif args.model == "gcn-v":
         model = GCN_Virtual(input_dim, args.hid_dim, outdim, args.layers, args.dropout,
                             activation=args.activation, JK=args.JK, normalize=False, cached=False)
+    elif args.model == "sage-v":
+        model = SAGE_Virtual(input_dim, args.hid_dim, outdim, args.layers, args.dropout, activation=args.activation, JK=args.JK)
+
     return model
 
 
