@@ -167,8 +167,6 @@ class GCN_Virtual(torch.nn.Module):
             activation_layer = ReLU()
         elif activation == "leaky":
             activation_layer = LeakyReLU()
-        elif activation == "softplus":
-            activation_layer = Softplus()
         elif activation == "elu":
             activation_layer = ELU()
         else:
