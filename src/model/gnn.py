@@ -172,9 +172,9 @@ class GCN_Virtual(torch.nn.Module):
         else:
             raise ValueError(f"{activation} is unsupported at this time!")
 
-        self.virtual_node_module_list = []
+
+        self.virtual_node_mlp = torch.nn.ModuleList()
         for i in range(num_virtual_nodes):
-            self.virtual_node_mlp = torch.nn.ModuleList()
             self.virtual_node_mlp.append(
                 Sequential(
                     Linear(in_channels, 2 * hidden_channels),
@@ -185,7 +185,8 @@ class GCN_Virtual(torch.nn.Module):
                     torch.nn.LayerNorm(hidden_channels),
                 )
             )
-            for layer in range(num_layers-2):
+        for layer in range(num_layers-2):
+            for i in range(num_virtual_nodes):
                 self.virtual_node_mlp.append(
                     Sequential(
                         Linear(hidden_channels, 2*hidden_channels),
@@ -196,7 +197,6 @@ class GCN_Virtual(torch.nn.Module):
                         torch.nn.LayerNorm(hidden_channels),
                     )
                 )
-            self.virtual_node_module_list.append(self.virtual_node_mlp)
         self.aggregation = aggregation
         self.JK = JK
         self.dropout = dropout
@@ -239,9 +239,10 @@ class GCN_Virtual(torch.nn.Module):
                 # mlp layer for each virtual node
                 virtual_node_list = []
                 for v in range(self.num_virtual_nodes):
-                    virtual_node_mlp = self.virtual_node_module_list[v][layer](virtual_node_tmp[v].unsqueeze(0))
+                    virtual_node_mlp = self.virtual_node_mlp[v+layer*self.num_virtual_nodes](virtual_node_tmp[v].unsqueeze(0))
                     virtual_node_list.append(virtual_node_mlp)
                 virtual_node = F.dropout(torch.cat(virtual_node_list, dim=0), self.dropout, training=self.training)
+
 
         if self.JK == "last":
             emb = embs[-1]
