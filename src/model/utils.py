@@ -30,8 +30,8 @@ def init_model(args, data, dataset_id, outdim=None):
     elif args.model == "gin":
         model = GIN(input_dim, args.hid_dim, args.layers, args.dropout)
     elif args.model == "gcn-v":
-        model = GCN_Virtual(input_dim, args.hid_dim, outdim, args.layers, args.dropout,
-                            activation=args.activation, JK=args.JK, normalize=False, cached=False)
+        model = GCN_Virtual(input_dim, args.hid_dim, outdim, args.layers, args.dropout, args.num_virtual_nodes,
+                            aggregation=args.aggregation, activation=args.activation, JK=args.JK, normalize=False, cached=False)
     elif args.model == "sage-v":
         model = SAGE_Virtual(input_dim, args.hid_dim, outdim, args.layers, args.dropout, activation=args.activation, JK=args.JK)
 

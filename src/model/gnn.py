@@ -142,7 +142,8 @@ class GIN(torch.nn.Module):
 
 
 class GCN_Virtual(torch.nn.Module):
-    def __init__(self, in_channels, hidden_channels, out_channels, num_layers, dropout, activation="relu", JK="last", normalize=True, cached=False):
+    def __init__(self, in_channels, hidden_channels, out_channels, num_layers, dropout, num_virtual_nodes,
+                 aggregation="sum", activation="relu", JK="last", normalize=True, cached=False):
         super().__init__()
         self.num_layers = num_layers
         self.convs = torch.nn.ModuleList()
@@ -158,11 +159,10 @@ class GCN_Virtual(torch.nn.Module):
             GCNConv(hidden_channels, out_channels, normalize=normalize, cached=cached))
         self.batch_norms.append(BatchNorm1d(out_channels))
 
-        ### set the initial virtual node embedding to 0.
-        self.virtual_node = torch.nn.Embedding(1, in_channels)
-        torch.nn.init.constant_(self.virtual_node.weight.data, 0)
+        self.num_virtual_nodes = num_virtual_nodes
+        self.virtual_node = torch.nn.Embedding(num_virtual_nodes, in_channels)
+        torch.nn.init.constant_(self.virtual_node.weight.data, 0) # set the initial virtual node embedding to 0.
 
-        self.virtual_node_mlp = torch.nn.ModuleList()
         if activation == "relu":
             activation_layer = ReLU()
         elif activation == "leaky":
@@ -172,28 +172,32 @@ class GCN_Virtual(torch.nn.Module):
         else:
             raise ValueError(f"{activation} is unsupported at this time!")
 
-        self.virtual_node_mlp.append(
-            Sequential(
-                Linear(in_channels, 2 * hidden_channels),
-                activation_layer,
-                torch.nn.LayerNorm(2 * hidden_channels),
-                Linear(2 * hidden_channels, hidden_channels),
-                activation_layer,
-                torch.nn.LayerNorm(hidden_channels),
-            )
-        )
-        for layer in range(num_layers-2):
+        self.virtual_node_module_list = []
+        for i in range(num_virtual_nodes):
+            self.virtual_node_mlp = torch.nn.ModuleList()
             self.virtual_node_mlp.append(
                 Sequential(
-                    Linear(hidden_channels, 2*hidden_channels),
+                    Linear(in_channels, 2 * hidden_channels),
                     activation_layer,
-                    torch.nn.LayerNorm(2*hidden_channels),
-                    Linear(2*hidden_channels, hidden_channels),
+                    torch.nn.LayerNorm(2 * hidden_channels),
+                    Linear(2 * hidden_channels, hidden_channels),
                     activation_layer,
                     torch.nn.LayerNorm(hidden_channels),
                 )
             )
-
+            for layer in range(num_layers-2):
+                self.virtual_node_mlp.append(
+                    Sequential(
+                        Linear(hidden_channels, 2*hidden_channels),
+                        activation_layer,
+                        torch.nn.LayerNorm(2*hidden_channels),
+                        Linear(2*hidden_channels, hidden_channels),
+                        activation_layer,
+                        torch.nn.LayerNorm(hidden_channels),
+                    )
+                )
+            self.virtual_node_module_list.append(self.virtual_node_mlp)
+        self.aggregation = aggregation
         self.JK = JK
         self.dropout = dropout
 
@@ -208,11 +212,18 @@ class GCN_Virtual(torch.nn.Module):
         virtual_node:   [1, # of features]
         """
         # initialize virtual node to zero
-        virtual_node = self.virtual_node(torch.zeros(1).to(torch.long).to(x.device))
+        virtual_node = self.virtual_node(torch.zeros(self.num_virtual_nodes).to(torch.long).to(x.device))
 
         embs = [x]
         for layer in range(self.num_layers):
-            new_x = embs[layer] + virtual_node      # add message from virtual node
+            if self.aggregation == "sum":
+                aggregated_virtual_node = virtual_node.sum(dim=0, keepdim=True)
+            elif self.aggregation == "mean":
+                aggregated_virtual_node = virtual_node.mean(dim=0, keepdim=True)
+            elif self.aggregation == "max":
+                aggregated_virtual_node = torch.max(virtual_node, dim=0, keepdim=True).values
+
+            new_x = embs[layer] + aggregated_virtual_node      # add message from virtual node
             new_x = self.convs[layer](new_x, adj_t) # GCN layer
             new_x = self.batch_norms[layer](new_x)
             new_x = F.relu(new_x)
@@ -222,10 +233,15 @@ class GCN_Virtual(torch.nn.Module):
             # update virtual node
             if layer < self.num_layers-1:
                 # create a node that contains all graph nodes information
-                # virtual_node_tmp: [1, # of features], virtual_node: [1, # of features]
+                # global_add_pool: [1, # of features]
+                # virtual_node_tmp: [# of virtual nodes, # of features], virtual_node: [# of virtual nodes, # of features]
                 virtual_node_tmp = global_add_pool(embs[layer], torch.zeros(1, dtype=torch.int64, device=x.device)) + virtual_node
-                virtual_node = self.virtual_node_mlp[layer](virtual_node_tmp)   # mlp layer
-                virtual_node = F.dropout(virtual_node, self.dropout, training=self.training)
+                # mlp layer for each virtual node
+                virtual_node_list = []
+                for v in range(self.num_virtual_nodes):
+                    virtual_node_mlp = self.virtual_node_module_list[v][layer](virtual_node_tmp[v].unsqueeze(0))
+                    virtual_node_list.append(virtual_node_mlp)
+                virtual_node = F.dropout(torch.cat(virtual_node_list, dim=0), self.dropout, training=self.training)
 
         if self.JK == "last":
             emb = embs[-1]
@@ -268,8 +284,10 @@ class SAGE_Virtual(torch.nn.Module):
             Sequential(
                 Linear(in_channels, 2 * hidden_channels),
                 activation_layer,
+                torch.nn.LayerNorm(2 * hidden_channels),
                 Linear(2 * hidden_channels, hidden_channels),
                 activation_layer,
+                torch.nn.LayerNorm(hidden_channels),
             )
         )
         for layer in range(num_layers-2):
@@ -277,8 +295,10 @@ class SAGE_Virtual(torch.nn.Module):
                 Sequential(
                     Linear(hidden_channels, 2*hidden_channels),
                     activation_layer,
+                    torch.nn.LayerNorm(2*hidden_channels),
                     Linear(2*hidden_channels, hidden_channels),
                     activation_layer,
+                    torch.nn.LayerNorm(hidden_channels),
                 )
             )
 

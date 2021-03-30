@@ -33,11 +33,16 @@ def register_default_args(parser, ident):
 
     parser.add_argument('--train_idx', type=str, default="train20",
                         help="train_idx files for ogbl-ppa. train50 : 50% of train data")
-
     # ogbl-ppa-SGC
     parser.add_argument('--K', type=int, default=1, help="K hop for SGC")
+
+    # virtual nodes
     parser.add_argument('--JK', type=str, default="last", help="JK aggregation for gcn w/ virtual node")
-    parser.add_argument('--activation', type=str, default="relu", help="activation layer for gnn-v relu: ReLU, leaky: LeakyReLU")
+    parser.add_argument('--activation', type=str, default="relu", choices=["relu","leaky", "elu"],
+                        help="activation layer for gnn-v relu: ReLU, leaky: LeakyReLU, elu: ELU")
+    parser.add_argument('--aggregation', type=str, default="sum", choices=["sum", "mean", "max"],
+                        help="aggregation rule for virtual nodes")
+    parser.add_argument('--num_virtual_nodes', type=int, default=1, help="number of virtual node for virtual node model")
 
     # LinkPredictor uses lp_layers
     parser.add_argument('--lp_layers', type=int, default=3)
