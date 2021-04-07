@@ -231,48 +231,44 @@ class KGEModel(nn.Module):
     def train_step(model, optimizer, train_iterator, device, negative_adversarial_sampling, uni_weight,
                    regularization, adversarial_temperature):
         model.train()
-        loss_values = []
-        for i in tqdm(range(len(train_iterator))):
-            optimizer.zero_grad()
-            positive_sample, negative_sample, subsampling_weight, mode = next(train_iterator)
-            positive_sample = positive_sample.to(device)
-            negative_sample = negative_sample.to(device)
-            subsampling_weight = subsampling_weight.to(device)
+        optimizer.zero_grad()
+        positive_sample, negative_sample, subsampling_weight, mode = next(train_iterator)
+        positive_sample = positive_sample.to(device)
+        negative_sample = negative_sample.to(device)
+        subsampling_weight = subsampling_weight.to(device)
 
-            negative_score = model((positive_sample, negative_sample), mode=mode)
-            if negative_adversarial_sampling:
-                #In self-adversarial sampling, we do not apply back-propagation on the sampling weight
-                negative_score = (F.softmax(negative_score * adversarial_temperature, dim=1).detach()
-                                  * F.logsigmoid(-negative_score)).sum(dim=1)
-            else:
-                negative_score = F.logsigmoid(-negative_score).mean(dim=1)
+        negative_score = model((positive_sample, negative_sample), mode=mode)
+        if negative_adversarial_sampling:
+            #In self-adversarial sampling, we do not apply back-propagation on the sampling weight
+            negative_score = (F.softmax(negative_score * adversarial_temperature, dim=1).detach()
+                              * F.logsigmoid(-negative_score)).sum(dim=1)
+        else:
+            negative_score = F.logsigmoid(-negative_score).mean(dim=1)
 
-            positive_score = model(positive_sample)
-            positive_score = F.logsigmoid(positive_score).squeeze(dim=1)
+        positive_score = model(positive_sample)
+        positive_score = F.logsigmoid(positive_score).squeeze(dim=1)
 
-            if uni_weight:
-                positive_sample_loss = - positive_score.mean()
-                negative_sample_loss = - negative_score.mean()
-            else:
-                positive_sample_loss = - (subsampling_weight * positive_score).sum()/subsampling_weight.sum()
-                negative_sample_loss = - (subsampling_weight * negative_score).sum()/subsampling_weight.sum()
+        if uni_weight:
+            positive_sample_loss = - positive_score.mean()
+            negative_sample_loss = - negative_score.mean()
+        else:
+            positive_sample_loss = - (subsampling_weight * positive_score).sum()/subsampling_weight.sum()
+            negative_sample_loss = - (subsampling_weight * negative_score).sum()/subsampling_weight.sum()
 
-            loss = (positive_sample_loss + negative_sample_loss)/2
+        loss = (positive_sample_loss + negative_sample_loss)/2
 
-            if regularization != 0.0:
-                #Use L3 regularization for ComplEx and DistMult
-                regularization = regularization * (
-                    model.entity_embedding.norm(p = 3)**3 +
-                    model.relation_embedding.norm(p = 3).norm(p = 3)**3
-                )
-                loss = loss + regularization
+        if regularization != 0.0:
+            #Use L3 regularization for ComplEx and DistMult
+            regularization = regularization * (
+                model.entity_embedding.norm(p = 3)**3 +
+                model.relation_embedding.norm(p = 3).norm(p = 3)**3
+            )
+            loss = loss + regularization
 
-            loss.backward()
-            optimizer.step()
-            loss_values.append(loss.item())
+        loss.backward()
+        optimizer.step()
 
-        final_loss = sum(loss_values)/len(loss_values)
-        return final_loss
+        return loss.item()
     
     @staticmethod
     def test_step(model, test_dataset_list, device):

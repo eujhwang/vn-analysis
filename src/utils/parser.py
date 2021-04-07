@@ -72,7 +72,7 @@ def kg_parse_args():
     parser.add_argument('--data_dir', type=str, default='data', help='data directory path')
     parser.add_argument('--device', type=int, default=0)
     parser.add_argument('--seed', type=int, default=random.randint(0, 2 ** 32), help="seed for random number generator")
-    parser.add_argument('--epochs', type=int, default=50)
+    parser.add_argument('--max_steps', default=100000, type=int)
 
     parser.add_argument('--dataset', type=str, default='ogbl-biokg', help='dataset name, default to biokg')
     parser.add_argument('--model', default='TransE', type=str)

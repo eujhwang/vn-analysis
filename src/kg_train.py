@@ -24,8 +24,9 @@ class KGTrainer:
         model: Module,
         train_iterator: DataLoader,
         optimizer: torch.optim.Optimizer,
-        epochs:int,
         eval_steps:int,
+        max_steps: int,
+        learning_rate: float,
         evaluation: Evaluation,
         early_stopping: Module,
         device: torch.device,
@@ -40,8 +41,9 @@ class KGTrainer:
         self.model = model
         self.train_iterator = train_iterator
         self.opt = optimizer
-        self.epochs = epochs
+        self.max_steps = max_steps
         self.eval_steps = eval_steps
+        self.learning_rate = learning_rate
         self.early_stopping = early_stopping
         self.evaluation = evaluation
         self.best_score = 0.0
@@ -68,20 +70,29 @@ class KGTrainer:
 
     def train(self):
         print("Training start..")
-        for epoch in range(1, 1 + self.epochs):
-            print("\n===================== Epoch (%d / %d) =====================" % (epoch, self.epochs))
-            epoch_start_time = time.time()
+        warm_up_steps = self.max_steps // 2
+        for step in tqdm(range(0, self.max_steps)):
+            step_start_time = time.time()
             loss = self.model.train_step(self.model, self.opt, self.train_iterator, self.device, self.negative_adversarial_sampling,
                                   self.uni_weight, self.regularization, self.adversarial_temperature)
 
-            if self.epochs % self.eval_steps == 0:
+            if step >= warm_up_steps:
+                self.learning_rate = self.learning_rate / 10
+                print('Change learning_rate to %f at step %d' % (self.learning_rate, step))
+                self.opt = torch.optim.Adam(
+                    filter(lambda p: p.requires_grad, self.model.parameters()),
+                    lr=self.learning_rate
+                )
+                warm_up_steps = warm_up_steps * 3
+
+            if step % self.eval_steps == 0:
                 self.evaluation.evaluate()
 
             wandb.log(
                 {
-                    "[Train] Epoch": epoch,
+                    "[Train] Step": step,
                     "[Train] Loss": loss,
-                    "[Train] Elapsed Time:": (time.time() - epoch_start_time)
+                    "[Train] Elapsed Time:": (time.time() - step_start_time)
                 },
                 commit=False,
             )
