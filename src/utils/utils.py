@@ -156,6 +156,10 @@ def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
             data.full_adj_t = data.full_adj_t.to_symmetric()
         else:
             data.full_adj_t = data.adj_t
+    elif dataset_id == "ogbl-biokg":
+        dataset = LinkPropPredDataset(name='ogbl-biokg')
+        data = dataset[0]
+        data_edge_dict = dataset.get_edge_split()
 
     return data, data_edge_dict
 

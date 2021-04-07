@@ -70,13 +70,9 @@ def kg_parse_args():
         usage='train.py [<args>] [-h | --help]'
     )
     parser.add_argument('--data_dir', type=str, default='data', help='data directory path')
-    parser.add_argument('--use_cuda', action='store_true', help='use GPU')
+    parser.add_argument('--device', type=int, default=0)
     parser.add_argument('--seed', type=int, default=random.randint(0, 2 ** 32), help="seed for random number generator")
-
-    parser.add_argument('--do_train', action='store_true')
-    parser.add_argument('--do_valid', action='store_true')
-    parser.add_argument('--do_test', action='store_true')
-    parser.add_argument('--evaluate_train', action='store_true', help='Evaluate on training data')
+    parser.add_argument('--epochs', type=int, default=50)
 
     parser.add_argument('--dataset', type=str, default='ogbl-biokg', help='dataset name, default to biokg')
     parser.add_argument('--model', default='TransE', type=str)
@@ -89,29 +85,19 @@ def kg_parse_args():
     parser.add_argument('--negative_adversarial_sampling', action='store_true')
     parser.add_argument('--adversarial_temperature', default=1.0, type=float)
     parser.add_argument('--log_train_batch_size', default=10, type=int) # 1024
-    parser.add_argument('-reg', default=0.0, type=float, help="regularization")
+    parser.add_argument('--reg', default=0.0, type=float, help="regularization")
     parser.add_argument('--log_valid_batch_size', default=4, type=int, help='valid/test batch size')
     parser.add_argument('--uni_weight', action='store_true',
                         help='Otherwise use subsampling weighting like in word2vec')
 
-    parser.add_argument('-lr', '--learning_rate', default=0.0001, type=float)
-    parser.add_argument('-cpu', '--cpu_num', default=10, type=int)
-    parser.add_argument('-init', '--init_checkpoint', default=None, type=str)
-    parser.add_argument('-save', '--save_path', default=None, type=str)
-    parser.add_argument('--max_steps', default=100000, type=int)
-    parser.add_argument('--warm_up_steps', default=None, type=int)
-
-    parser.add_argument('--save_checkpoint_steps', default=10000, type=int)
-    parser.add_argument('--valid_steps', default=10000, type=int)
-    parser.add_argument('--log_steps', default=100, type=int, help='train log every xx steps')
-    parser.add_argument('--test_log_steps', default=1000, type=int, help='valid/test log every xx steps')
-
-    parser.add_argument('--nentity', type=int, default=0, help='DO NOT MANUALLY SET')
-    parser.add_argument('--nrelation', type=int, default=0, help='DO NOT MANUALLY SET')
-
+    parser.add_argument('--learning_rate', default=0.0001, type=float)
+    parser.add_argument('--save_path', default=None, type=str)
     parser.add_argument('--print_on_screen', action='store_true', help='log on screen or not')
     parser.add_argument('--ntriples_eval_train', type=int, default=200000,
                         help='number of training triples to evaluate eventually')
     parser.add_argument('--neg_size_eval_train', type=int, default=500,
                         help='number of negative samples when evaluating training triples')
+    parser.add_argument('--patience', default=50, type=int)  # ogbn-pro default
+    parser.add_argument('--eval_steps', default=1, type=int)  # ogbn-pro default
+
     return parser.parse_args()
