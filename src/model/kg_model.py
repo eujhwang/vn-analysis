@@ -13,6 +13,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from torch.utils.data import DataLoader
+from tqdm import tqdm
+
 from dataloader import TestDataset
 from collections import defaultdict
 
@@ -226,126 +228,73 @@ class KGEModel(nn.Module):
         return score
 
     @staticmethod
-    def train_step(model, optimizer, train_iterator, args):
-        '''
-        A single train step. Apply back-propation and return the loss
-        '''
-
+    def train_step(model, optimizer, train_iterator, device, negative_adversarial_sampling, uni_weight,
+                   regularization, adversarial_temperature):
         model.train()
-        optimizer.zero_grad()
-        positive_sample, negative_sample, subsampling_weight, mode = next(train_iterator)
+        loss_values = []
+        for i in tqdm(range(len(train_iterator))):
+            optimizer.zero_grad()
+            positive_sample, negative_sample, subsampling_weight, mode = next(train_iterator)
+            positive_sample = positive_sample.to(device)
+            negative_sample = negative_sample.to(device)
+            subsampling_weight = subsampling_weight.to(device)
 
-        if args.cuda:
-            positive_sample = positive_sample.cuda()
-            negative_sample = negative_sample.cuda()
-            subsampling_weight = subsampling_weight.cuda()
+            negative_score = model((positive_sample, negative_sample), mode=mode)
+            if negative_adversarial_sampling:
+                #In self-adversarial sampling, we do not apply back-propagation on the sampling weight
+                negative_score = (F.softmax(negative_score * adversarial_temperature, dim=1).detach()
+                                  * F.logsigmoid(-negative_score)).sum(dim=1)
+            else:
+                negative_score = F.logsigmoid(-negative_score).mean(dim=1)
 
-        negative_score = model((positive_sample, negative_sample), mode=mode)
-        if args.negative_adversarial_sampling:
-            #In self-adversarial sampling, we do not apply back-propagation on the sampling weight
-            negative_score = (F.softmax(negative_score * args.adversarial_temperature, dim = 1).detach() 
-                              * F.logsigmoid(-negative_score)).sum(dim = 1)
-        else:
-            negative_score = F.logsigmoid(-negative_score).mean(dim = 1)
+            positive_score = model(positive_sample)
+            positive_score = F.logsigmoid(positive_score).squeeze(dim=1)
 
-        positive_score = model(positive_sample)
-        positive_score = F.logsigmoid(positive_score).squeeze(dim = 1)
+            if uni_weight:
+                positive_sample_loss = - positive_score.mean()
+                negative_sample_loss = - negative_score.mean()
+            else:
+                positive_sample_loss = - (subsampling_weight * positive_score).sum()/subsampling_weight.sum()
+                negative_sample_loss = - (subsampling_weight * negative_score).sum()/subsampling_weight.sum()
 
-        if args.uni_weight:
-            positive_sample_loss = - positive_score.mean()
-            negative_sample_loss = - negative_score.mean()
-        else:
-            positive_sample_loss = - (subsampling_weight * positive_score).sum()/subsampling_weight.sum()
-            negative_sample_loss = - (subsampling_weight * negative_score).sum()/subsampling_weight.sum()
+            loss = (positive_sample_loss + negative_sample_loss)/2
 
-        loss = (positive_sample_loss + negative_sample_loss)/2
-        
-        if args.regularization != 0.0:
-            #Use L3 regularization for ComplEx and DistMult
-            regularization = args.regularization * (
-                model.entity_embedding.norm(p = 3)**3 + 
-                model.relation_embedding.norm(p = 3).norm(p = 3)**3
-            )
-            loss = loss + regularization
-            regularization_log = {'regularization': regularization.item()}
-        else:
-            regularization_log = {}
-        
-        loss.backward()
+            if regularization != 0.0:
+                #Use L3 regularization for ComplEx and DistMult
+                regularization = regularization * (
+                    model.entity_embedding.norm(p = 3)**3 +
+                    model.relation_embedding.norm(p = 3).norm(p = 3)**3
+                )
+                loss = loss + regularization
 
-        optimizer.step()
+            loss.backward()
+            optimizer.step()
+            loss_values.append(loss.item())
 
-        log = {
-            **regularization_log,
-            'positive_sample_loss': positive_sample_loss.item(),
-            'negative_sample_loss': negative_sample_loss.item(),
-            'loss': loss.item()
-        }
-
-        return log
+        final_loss = sum(loss_values)/len(loss_values)
+        return final_loss
     
     @staticmethod
-    def test_step(model, test_triples, args, entity_dict, random_sampling=False):
+    def test_step(model, test_dataset_list, device):
         '''
         Evaluate the model on test or valid datasets
         '''
-        
+        results = defaultdict(list)
         model.eval()
-
-        #Prepare dataloader for evaluation
-        test_dataloader_head = DataLoader(
-            TestDataset(
-                test_triples, 
-                args, 
-                'head-batch',
-                random_sampling,
-                entity_dict
-            ), 
-            batch_size=args.test_batch_size,
-            collate_fn=TestDataset.collate_fn
-        )
-
-        test_dataloader_tail = DataLoader(
-            TestDataset(
-                test_triples, 
-                args, 
-                'tail-batch',
-                random_sampling,
-                entity_dict
-            ), 
-            batch_size=args.test_batch_size,
-            collate_fn=TestDataset.collate_fn
-        )
-        
-        test_dataset_list = [test_dataloader_head, test_dataloader_tail]
-        
-        test_logs = defaultdict(list)
-
-        step = 0
-        total_steps = sum([len(dataset) for dataset in test_dataset_list])
-
         with torch.no_grad():
             for test_dataset in test_dataset_list:
                 for positive_sample, negative_sample, mode in test_dataset:
-                    if args.cuda:
-                        positive_sample = positive_sample.cuda()
-                        negative_sample = negative_sample.cuda()
+                    positive_sample = positive_sample.to(device)
+                    negative_sample = negative_sample.to(device)
 
                     batch_size = positive_sample.size(0)
                     score = model((positive_sample, negative_sample), mode)
 
-                    batch_results = model.evaluator.eval({'y_pred_pos': score[:, 0], 
-                                                'y_pred_neg': score[:, 1:]})
-                    for metric in batch_results:
-                        test_logs[metric].append(batch_results[metric])
-
-                    if step % args.test_log_steps == 0:
-                        logging.info('Evaluating the model... (%d/%d)' % (step, total_steps))
-
-                    step += 1
+                    batch_results = model.evaluator.eval({'y_pred_pos': score[:, 0], 'y_pred_neg': score[:, 1:]})
+                    for metric_name in batch_results:
+                        results[metric_name].append(batch_results[metric_name])
 
             metrics = {}
-            for metric in test_logs:
-                metrics[metric] = torch.cat(test_logs[metric]).mean().item()
-
+            for metric in results:
+                metrics[metric] = torch.cat(results[metric]).mean().item()
         return metrics

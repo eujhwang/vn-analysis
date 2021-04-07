@@ -172,7 +172,6 @@ class GCN_Virtual(torch.nn.Module):
         else:
             raise ValueError(f"{activation} is unsupported at this time!")
 
-
         self.virtual_node_mlp = torch.nn.ModuleList()
         for i in range(num_virtual_nodes):
             self.virtual_node_mlp.append(
@@ -209,7 +208,7 @@ class GCN_Virtual(torch.nn.Module):
         """
         x:              [# of nodes, # of features]
         adj_t:          [# of nodes, # of nodes]
-        virtual_node:   [1, # of features]
+        virtual_node:   [# of virtual nodes, # of features]
         """
         # initialize virtual node to zero
         virtual_node = self.virtual_node(torch.zeros(self.num_virtual_nodes).to(torch.long).to(x.device))
