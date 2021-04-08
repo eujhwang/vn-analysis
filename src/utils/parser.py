@@ -24,7 +24,7 @@ def register_default_args(parser, ident):
     parser.add_argument('--data_dir', type=str, default="data")
     parser.add_argument('--use_gdc', action='store_true',
                         help='Use GDC preprocessing.')
-    parser.add_argument('--model', type=str, default="appnp",
+    parser.add_argument('--model', type=str, default="gcn",
                         choices=["mlp", "gcn", "sage", "mlp", "gat", "sgc", "gin", "gcn-v", "sage-v","appnp","gdc"])
     parser.add_argument('--layers', type=int, default=2)
     parser.add_argument('--hid_dim', type=int, default=64)
@@ -67,10 +67,6 @@ def register_default_args(parser, ident):
     #appnp
     parser.add_argument('--hidden', type=int, default=64)
     parser.add_argument('--alpha', type=float, default=0.1)
-
-    #ddi
-    parser.add_argument('--hidden_channels', type=int, default="256")
-    parser.add_argument('--num_layers', type=int, default="2")
 
 
 

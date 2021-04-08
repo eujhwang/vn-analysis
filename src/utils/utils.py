@@ -170,7 +170,7 @@ def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
         data = dataset[0]
 
         device = cuda_if_available(args.device)
-        emb = torch.nn.Embedding(data.num_nodes, args.hidden_channels).to(device)
+        emb = torch.nn.Embedding(data.num_nodes, args.hid_dim).to(device)
         torch.nn.init.xavier_uniform_(emb.weight)
         data.x = emb.weight
         adj_t = data.adj_t.to(device)

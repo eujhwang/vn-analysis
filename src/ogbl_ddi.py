@@ -48,8 +48,8 @@ def setup(args):
     wandb.watch(model)
 
     #predictor = LinkPredictor(args.hid_dim, args.hid_dim, 1, args.lp_layers, args.dropout).to(device)
-    predictor=LinkPredictor(args.hidden_channels, args.hidden_channels, 1,
-                  args.num_layers, args.dropout).to(device)
+    predictor=LinkPredictor(args.hid_dim, args.hid_dim, 1,
+                  args.layers, args.dropout).to(device)
     optimizer = torch.optim.Adam(list(model.parameters()) + list(predictor.parameters()), lr=args.lr)
     early_stopping = EarlyStopping("Accuracy", patience=args.patience)
 

@@ -13,7 +13,6 @@ def init_model(args, data, dataset_id, outdim=None):
 
     if dataset_id == "ogbl-ddi":
         input_dim = args.hid_dim
-        outdim = args.hid_dim
 
     if args.model == "mlp":
         model = MLP(input_dim, args.hid_dim, outdim, args.layers, args.dropout)
@@ -26,7 +25,7 @@ def init_model(args, data, dataset_id, outdim=None):
         if dataset_id == "ogbl-ppa":
             model = GCN(input_dim, args.hid_dim, outdim, args.layers, args.dropout, normalize=False, cached=False)
             precompute_norm(data)
-        elif dataset_id == "ogbl-collab":
+        elif dataset_id == "ogbl-collab" or dataset_id == "ogbl-ddi":
             model = GCN(input_dim, args.hid_dim, outdim, args.layers, args.dropout, normalize=True, cached=True)
     elif args.model == "gat":
         model = GAT(input_dim, args.hid_dim, outdim, args.layers, args.heads, args.dropout)

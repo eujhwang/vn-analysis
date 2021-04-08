@@ -88,7 +88,6 @@ class Trainer:
                 else:
                     h = self.model(self.data.x, self.data.adj_t)
 
-
                 edge = pos_train_edge[perm].t()
                 pos_out = self.predictor(h[edge[0]], h[edge[1]])
 
@@ -126,14 +125,15 @@ class Trainer:
                 elif self.dataset_id == "ogbl-collab":
                     self.update_save_best_score(metrics["[Valid] Hits@50"], epoch)
                     metrics["[Valid] Best Hits@50"] = self.best_score
+                elif self.dataset_id == "ogbl-ddi":
+                    self.update_save_best_score(metrics["[Valid] Hits@20"], epoch)
+                    metrics["[Valid] Best Hits@20"] = self.best_score
                 print("metrics", metrics)
                 wandb.log(metrics, commit=False)
                 self.early_stopping(self.best_score)
             wandb.log({})
 
         metrics = self.evaluation.evaluate(pos_train_pred)
-        self.update_save_best_score(metrics["[Valid] Hits@100"], epoch)
-        metrics["[Valid] Best Hits@100"] = self.best_score
         print("metrics", metrics)
         wandb.log(metrics, commit=False)
         wandb.log({})
@@ -212,7 +212,7 @@ class Evaluation:
         neg_test_pred = torch.cat(neg_test_preds, dim=0)
 
         results = {}
-        for K in [10, 50, 100]:
+        for K in [10, 20, 30, 50, 100]:
             self._evaulator.K = K
             # dummy train, using valid
             train_hits = self._evaulator.eval({
