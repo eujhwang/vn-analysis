@@ -48,7 +48,33 @@ def init_model(args, data, dataset_id, outdim=None):
         model = GDC_Net(input_dim, args.hid_dim,args,data.edge_weight)
 
         #model = AGNNConv_Net(16,outdim)
+    if dataset_id == "ogbl-ddi":
+        device = f'cuda:{args.device}' if torch.cuda.is_available() else 'cpu'
+        device = torch.device(device)
+        if args.model == "gcn":
+            model = GCN(args.hidden_channels, args.hidden_channels,
+                args.hidden_channels, args.num_layers,
+                args.dropout).to(device)
+        elif args.model == "sage":
+            model = SAGE(args.hidden_channels, args.hidden_channels,
+                         args.hidden_channels, args.num_layers,
+                         args.dropout).to(device)
+        elif args.model == "gat":
+            model = GAT(args.hidden_channels, args.hidden_channels, outdim, args.layers, args.heads, args.dropout)
+        elif args.model == "sgc":
+            model = SGC(input_dim, args.hid_dim, outdim, args.layers, args.dropout, args.K)
 
+            model = SGC(args.hidden_channels, args.hidden_channels, args.hidden_channels, args.layers, args.dropout, args.K)
+        elif args.model == "gin":
+            model = GIN(args.hidden_channels, args.hidden_channels, args.layers, args.dropout)
+
+        elif args.model == "gcn-v":
+            model = GCN_Virtual(args.hidden_channels, args.hidden_channels,args.hidden_channels, args.layers, args.dropout,
+                                activation=args.activation, JK=args.JK, normalize=False, cached=False)
+
+        elif args.model == "sage-v":
+            model = SAGE_Virtual(args.hidden_channels, args.hidden_channels,args.hidden_channels, args.layers, args.dropout, activation=args.activation,
+                                 JK=args.JK)
     return model
 
 

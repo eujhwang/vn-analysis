@@ -1,0 +1,1 @@
+{"format": "torch", "nodes": [{"name": "conv", "id": 140223530154384, "class_name": "SGConv(256, 256, K=1)", "parameters": [["lin.weight", [256, 256]], ["lin.bias", [256]]], "output_shape": [[4267, 256]], "num_parameters": [65536, 256]}], "edges": []}
