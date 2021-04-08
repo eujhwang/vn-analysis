@@ -156,14 +156,13 @@ def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
             data.full_adj_t = data.full_adj_t.to_symmetric()
         else:
             data.full_adj_t = data.adj_t
-<<<<<<< HEAD
+
         data.edge_weight=edge_weights
-=======
+
     elif dataset_id == "ogbl-biokg":
         dataset = LinkPropPredDataset(name='ogbl-biokg')
         data = dataset[0]
         data_edge_dict = dataset.get_edge_split()
->>>>>>> 66bf48b98f9b2fb1ba6655682373af6e8eaea2e4
 
     return data, data_edge_dict
 
