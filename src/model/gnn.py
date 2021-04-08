@@ -143,23 +143,34 @@ class GIN(torch.nn.Module):
         return x
 
 
-class GCN_Virtual(torch.nn.Module):
-    def __init__(self, in_channels, hidden_channels, out_channels, num_layers, dropout, num_virtual_nodes,
+class VirtualNode(torch.nn.Module):
+    def __init__(self, in_channels, hidden_channels, out_channels, num_layers, dropout, num_virtual_nodes, model,
                  aggregation="sum", activation="relu", JK="last", normalize=True, cached=False):
         super().__init__()
         self.num_layers = num_layers
         self.convs = torch.nn.ModuleList()
         self.batch_norms = torch.nn.ModuleList()
-        self.convs.append(
-            GCNConv(in_channels, hidden_channels, normalize=normalize, cached=cached))
-        self.batch_norms.append(BatchNorm1d(hidden_channels))
-        for _ in range(num_layers - 2):
+
+        if model == "gcn-v":
             self.convs.append(
-                GCNConv(hidden_channels, hidden_channels, normalize=normalize, cached=cached))
+                GCNConv(in_channels, hidden_channels, normalize=normalize, cached=cached))
             self.batch_norms.append(BatchNorm1d(hidden_channels))
-        self.convs.append(
-            GCNConv(hidden_channels, out_channels, normalize=normalize, cached=cached))
-        self.batch_norms.append(BatchNorm1d(out_channels))
+            for _ in range(num_layers - 2):
+                self.convs.append(
+                    GCNConv(hidden_channels, hidden_channels, normalize=normalize, cached=cached))
+                self.batch_norms.append(BatchNorm1d(hidden_channels))
+            self.convs.append(
+                GCNConv(hidden_channels, out_channels, normalize=normalize, cached=cached))
+            self.batch_norms.append(BatchNorm1d(out_channels))
+
+        elif model == "sage-v":
+            self.convs.append(SAGEConv(in_channels, hidden_channels))
+            self.batch_norms.append(BatchNorm1d(hidden_channels))
+            for _ in range(num_layers - 2):
+                self.convs.append(SAGEConv(hidden_channels, hidden_channels))
+                self.batch_norms.append(BatchNorm1d(hidden_channels))
+            self.convs.append(SAGEConv(hidden_channels, out_channels))
+            self.batch_norms.append(BatchNorm1d(out_channels))
 
         self.num_virtual_nodes = num_virtual_nodes
         self.virtual_node = torch.nn.Embedding(num_virtual_nodes, in_channels)

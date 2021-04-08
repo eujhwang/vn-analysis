@@ -1,5 +1,5 @@
 import torch
-from model.gnn import GCN, SAGE, GAT, SGC, GIN, GCN_Virtual, SAGE_Virtual, APPNP_Net,SGC_Net,GDC_Net
+from model.gnn import GCN, SAGE, GAT, SGC, GIN, VirtualNode, APPNP_Net,SGC_Net,GDC_Net
 
 from model.mlp import MLP
 
@@ -33,11 +33,9 @@ def init_model(args, data, dataset_id, outdim=None):
         model = SGC(input_dim, args.hid_dim, outdim, args.layers, args.dropout, args.K)
     elif args.model == "gin":
         model = GIN(input_dim, args.hid_dim, args.layers, args.dropout)
-    elif args.model == "gcn-v":
-        model = GCN_Virtual(input_dim, args.hid_dim, outdim, args.layers, args.dropout, args.num_virtual_nodes,
+    elif args.model == "gcn-v" or args.model == "sage-v":
+        model = VirtualNode(input_dim, args.hid_dim, outdim, args.layers, args.dropout, args.num_virtual_nodes, args.model,
                             aggregation=args.aggregation, activation=args.activation, JK=args.JK, normalize=False, cached=False)
-    elif args.model == "sage-v":
-        model = SAGE_Virtual(input_dim, args.hid_dim, outdim, args.layers, args.dropout, activation=args.activation, JK=args.JK)
     elif args.model == "appnp":
         model = APPNP_Net(input_dim, args.hid_dim, args)
     elif args.model == "gdc":

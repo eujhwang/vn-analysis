@@ -55,15 +55,6 @@ def register_default_args(parser, ident):
     # ogbl-collab uses node_embedding
     parser.add_argument('--use_valedges_as_input', type=int, default=0, help="0: false, 1: true")
 
-
-    # parser.add_argument('--use_node_embedding', type=int, default=0, choices=[0, 1])  # for mlp
-    # parser.add_argument('--runs', type=int, default=10 if torch.cuda.is_available() else 3)
-    # parser.add_argument('--dir_results', type=str, default="../r_{}".format(ident))
-    # parser.add_argument('--dir_save', default="../s_{}".format(ident))
-    # parser.add_argument('--filename', type=str, default="test")
-    # parser.add_argument('--checkpointing', type=int, default=1, choices=[0, 1])
-    # parser.add_argument('--checkpoint', type=str, default="")
-
     #appnp
     parser.add_argument('--hidden', type=int, default=64)
     parser.add_argument('--alpha', type=float, default=0.1)
