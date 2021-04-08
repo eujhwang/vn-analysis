@@ -1,5 +1,6 @@
 import torch
-from model.gnn import GCN, SAGE, GAT, SGC, GIN, GCN_Virtual, SAGE_Virtual
+from model.gnn import GCN, SAGE, GAT, SGC, GIN, GCN_Virtual, SAGE_Virtual, APPNP_Net,SGC_Net,GDC_Net
+
 from model.mlp import MLP
 
 
@@ -34,6 +35,19 @@ def init_model(args, data, dataset_id, outdim=None):
                             aggregation=args.aggregation, activation=args.activation, JK=args.JK, normalize=False, cached=False)
     elif args.model == "sage-v":
         model = SAGE_Virtual(input_dim, args.hid_dim, outdim, args.layers, args.dropout, activation=args.activation, JK=args.JK)
+    elif args.model == "appnp":
+        #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        model = APPNP_Net(input_dim, args.hid_dim, args)
+    elif args.model == "sgc":
+        print('sgc')
+        # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        model = SGC_Net(input_dim, args.hid_dim)
+    elif args.model == "gdc":
+        print('gdc')
+        # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        model = GDC_Net(input_dim, args.hid_dim,args,data.edge_weight)
+
+        #model = AGNNConv_Net(16,outdim)
 
     return model
 

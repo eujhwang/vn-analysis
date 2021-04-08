@@ -144,11 +144,11 @@ def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
     elif dataset_id == "ogbl-collab":
         dataset = PygLinkPropPredDataset(name='ogbl-collab')
         data = dataset[0]
+        edge_weights=data.edge_weight
         edge_index = data.edge_index
         data.edge_weight = data.edge_weight.view(-1).to(torch.float)
         data = T.ToSparseTensor()(data)
         data_edge_dict = dataset.get_edge_split()
-
         if args.use_valedges_as_input:
             val_edge_index = data_edge_dict["valid"]["edge"].t()
             full_edge_index = torch.cat([edge_index, val_edge_index], dim=-1)
@@ -156,10 +156,14 @@ def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
             data.full_adj_t = data.full_adj_t.to_symmetric()
         else:
             data.full_adj_t = data.adj_t
+<<<<<<< HEAD
+        data.edge_weight=edge_weights
+=======
     elif dataset_id == "ogbl-biokg":
         dataset = LinkPropPredDataset(name='ogbl-biokg')
         data = dataset[0]
         data_edge_dict = dataset.get_edge_split()
+>>>>>>> 66bf48b98f9b2fb1ba6655682373af6e8eaea2e4
 
     return data, data_edge_dict
 

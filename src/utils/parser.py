@@ -22,8 +22,9 @@ def register_default_args(parser, ident):
     parser.add_argument('--patience', default=50, type=int)  # ogbn-pro default
     parser.add_argument('--log_batch_size', type=int, default=14)  #ogbl-ppa: 14, ddi:16 only
     parser.add_argument('--data_dir', type=str, default="data")
-
-    parser.add_argument('--model', type=str, default="mlp",
+    parser.add_argument('--use_gdc', action='store_true',
+                        help='Use GDC preprocessing.')
+    parser.add_argument('--model', type=str, default="appnp",
                         choices=["mlp", "gcn", "sage", "mlp", "gat", "sgc", "gin", "gcn-v", "sage-v"])
     parser.add_argument('--layers', type=int, default=2)
     parser.add_argument('--hid_dim', type=int, default=64)
@@ -62,6 +63,10 @@ def register_default_args(parser, ident):
     # parser.add_argument('--filename', type=str, default="test")
     # parser.add_argument('--checkpointing', type=int, default=1, choices=[0, 1])
     # parser.add_argument('--checkpoint', type=str, default="")
+
+    #appnp
+    parser.add_argument('--hidden', type=int, default=64)
+    parser.add_argument('--alpha', type=float, default=0.1)
 
 
 def kg_parse_args():

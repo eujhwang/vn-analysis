@@ -36,7 +36,7 @@ def setup(args):
     dataset_id = "ogbl-collab"
     data_dir = Path(args.data_dir).expanduser()
     data, data_edge_dict = create_dataset(args, dataset_id, data_dir)
-
+    print(data)
     data = data.to(device)
 
     train_dataloader, valid_pos_dataloader, valid_neg_dataloader, test_pos_dataloader, test_neg_dataloader = create_dataloader(data_edge_dict, args.log_batch_size)
@@ -87,10 +87,11 @@ def main():
     print("args:", args)
     assert args.model  # must not be empty for node property prediction
     set_seed(args.seed)
-    wandb.init(project='ogbl-collab', entity='hwang7520')
+    wandb.init(project='ogbl-collab', entity='smriti')
     wandb.config.update(args, allow_val_change=True)
     args = wandb.config
     trainer = setup(args)
+    print(trainer)
     trainer.train()
 
 

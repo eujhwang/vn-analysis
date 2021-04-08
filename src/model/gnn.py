@@ -3,6 +3,8 @@ import torch
 import torch.nn.functional as F
 from torch.nn import Sequential, Linear, ReLU, Conv2d, BatchNorm1d, LeakyReLU, Softplus, ELU
 from torch_geometric.nn import GCNConv, SAGEConv, GATConv, SGConv, GINConv, global_mean_pool, global_add_pool
+from torch_geometric.nn import AGNNConv
+from torch_geometric.nn import APPNP
 
 
 class GCN(torch.nn.Module):
@@ -342,3 +344,98 @@ class SAGE_Virtual(torch.nn.Module):
             for layer in range(1, self.num_layers):
                 emb += embs[layer]
         return emb
+
+class APPNP_Net(torch.nn.Module):
+    # def __init__(self, num_features , num_classes):
+    #     super(AGNNConv_Net, self).__init__()
+    #     self.lin1 = torch.nn.Linear(num_features, 16)
+    #     self.prop1 = AGNNConv(requires_grad=False)
+    #     self.prop2 = AGNNConv(requires_grad=True)
+    #     self.lin2 = torch.nn.Linear(16,num_classes)
+    #     self.convs = torch.nn.ModuleList()
+    #
+    #
+    # def forward(self, x, adj_t):
+    #     x = F.dropout(x, training=self.training)
+    #     x = F.relu(self.lin1(x))
+    #     x = self.prop1(x, adj_t)
+    #     x = self.prop2(x, adj_t)
+    #     x = F.dropout(x, training=self.training)
+    #     x = self.lin2(x)
+    #     return F.log_softmax(x, dim=1)
+    #
+    # def reset_parameters(self):
+    #     for conv in self.convs:
+    #         conv.reset_parameters()
+    def __init__(self, num_features , num_classes,args):
+        super(APPNP_Net, self).__init__()
+        self.lin1 = Linear(num_features, args.hidden)
+        self.lin2 = Linear(args.hidden, num_classes)
+        self.prop1 = APPNP(args.K, args.alpha)
+        self.args=args
+    def reset_parameters(self):
+        self.lin1.reset_parameters()
+        self.lin2.reset_parameters()
+
+    def forward(self, x, adj_t):
+        x, edge_index = x, adj_t
+        x = F.dropout(x, p=self.args.dropout, training=self.training)
+        x = F.relu(self.lin1(x))
+        x = F.dropout(x, p=self.args.dropout, training=self.training)
+        x = self.lin2(x)
+        x = self.prop1(x, edge_index)
+        return F.log_softmax(x, dim=1)
+
+class SGC_Net(torch.nn.Module):
+    def __init__(self,num_features , num_classes):
+        super(SGC_Net, self).__init__()
+        self.conv1 = SGConv(
+            num_features, num_classes, K=2, cached=True)
+        self.convs = torch.nn.ModuleList()
+
+    def forward(self, x, adj_t):
+        x, edge_index = x, adj_t
+        x = self.conv1(x, edge_index)
+        return F.log_softmax(x, dim=1)
+
+    def reset_parameters(self):
+        for conv in self.convs:
+            conv.reset_parameters()
+
+class SDC_Net(torch.nn.Module):
+    def __init__(self,num_features , num_classes):
+        super(SGC_Net, self).__init__()
+        self.conv1 = SGConv(
+            num_features, num_classes, K=2, cached=True)
+        self.convs = torch.nn.ModuleList()
+
+    def forward(self, x, adj_t):
+        x, edge_index = x, adj_t
+        x = self.conv1(x, edge_index)
+        return F.log_softmax(x, dim=1)
+
+    def reset_parameters(self):
+        for conv in self.convs:
+            conv.reset_parameters()
+
+class GDC_Net(torch.nn.Module):
+    def __init__(self,num_features , num_classes,args,edge_weight):
+        super(GDC_Net, self).__init__()
+        self.conv1 = GCNConv(num_features, 16, cached=True,
+                             normalize=not args.use_gdc)
+        self.conv2 = GCNConv(16, num_classes, cached=True,
+                             normalize=not args.use_gdc)
+        self.args=args
+        self.edge_weight=edge_weight
+        # self.conv1 = ChebConv(data.num_features, 16, K=2)
+        # self.conv2 = ChebConv(16, data.num_features, K=2)
+
+    def forward(self, x, adj_t,edge_weight):
+        x, edge_index, edge_weight = x, adj_t, self.edge_weight
+        x = F.relu(self.conv1(x, edge_index, self.edge_weight))
+        x = F.dropout(x, training=self.training)
+        x = self.conv2(x, edge_index, self.edge_weight)
+        return F.log_softmax(x, dim=1)
+    def reset_parameters(self):
+        self.conv1.reset_parameters()
+        self.conv2.reset_parameters()

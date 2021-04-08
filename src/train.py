@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 from pathlib import Path
 from typing import *
-
+from model.gnn import GDC_Net
 import torch
 import time
 import wandb
@@ -83,7 +83,11 @@ class Trainer:
             for i, perm in enumerate(tqdm(self.train_dataloader)):
                 # perm: [batch_size]; [16384]
                 self.opt.zero_grad()
-                h = self.model(self.data.x, self.data.adj_t)
+                if isinstance(self.model, GDC_Net):
+                    h = self.model(self.data.x, self.data.adj_t,self.data.edge_weight)
+                else:
+                    h = self.model(self.data.x, self.data.adj_t)
+
 
                 edge = pos_train_edge[perm].t()
                 pos_out = self.predictor(h[edge[0]], h[edge[1]])
@@ -167,8 +171,10 @@ class Evaluation:
         eval_start_time = time.time()
         self.model.eval()
         self.predictor.eval()
-
-        h = self.model(self.data.x, self.data.adj_t)
+        if isinstance(self.model, GDC_Net):
+            h = self.model(self.data.x, self.data.adj_t, self.data.edge_weight)
+        else:
+            h = self.model(self.data.x, self.data.adj_t)
 
         pos_valid_edge = self.data_edge_dict['valid']['edge'].to(h.device)
         neg_valid_edge = self.data_edge_dict['valid']['edge_neg'].to(h.device)
@@ -188,7 +194,10 @@ class Evaluation:
         neg_valid_pred = torch.cat(neg_valid_preds, dim=0)
 
         if self.dataset_id == "ogbl-collab":
-            h = self.model(self.data.x, self.data.full_adj_t)
+            if isinstance(self.model, GDC_Net):
+                h = self.model(self.data.x, self.data.full_adj_t, self.data.edge_weight)
+            else:
+                h = self.model(self.data.x, self.data.full_adj_t)
 
         pos_test_preds = []
         for perm in self.test_pos_dataloader:
