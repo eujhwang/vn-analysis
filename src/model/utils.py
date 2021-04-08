@@ -11,6 +11,10 @@ def init_model(args, data, dataset_id, outdim=None):
     if outdim is None:
         outdim = args.hid_dim
 
+    if dataset_id == "ogbl-ddi":
+        input_dim = args.hid_dim
+        outdim = args.hid_dim
+
     if args.model == "mlp":
         model = MLP(input_dim, args.hid_dim, outdim, args.layers, args.dropout)
         if args.use_node_embedding:
@@ -36,49 +40,9 @@ def init_model(args, data, dataset_id, outdim=None):
     elif args.model == "sage-v":
         model = SAGE_Virtual(input_dim, args.hid_dim, outdim, args.layers, args.dropout, activation=args.activation, JK=args.JK)
     elif args.model == "appnp":
-        #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         model = APPNP_Net(input_dim, args.hid_dim, args)
-    elif args.model == "sgc":
-        print('sgc')
-        # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        model = SGC_Net(input_dim, args.hid_dim)
     elif args.model == "gdc":
-        print('gdc')
-        # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         model = GDC_Net(input_dim, args.hid_dim,args,data.edge_weight)
-
-        #model = AGNNConv_Net(16,outdim)
-    if dataset_id == "ogbl-ddi":
-        device = f'cuda:{args.device}' if torch.cuda.is_available() else 'cpu'
-        device = torch.device(device)
-        if args.model == "gcn":
-            model = GCN(args.hidden_channels, args.hidden_channels,
-                args.hidden_channels, args.num_layers,
-                args.dropout).to(device)
-        elif args.model == "sage":
-            model = SAGE(args.hidden_channels, args.hidden_channels,
-                         args.hidden_channels, args.num_layers,
-                         args.dropout).to(device)
-        elif args.model == "gat":
-            model = GAT(args.hidden_channels, args.hidden_channels, outdim, args.layers, args.heads, args.dropout)
-        elif args.model == "sgc":
-            model = SGC(input_dim, args.hid_dim, outdim, args.layers, args.dropout, args.K)
-
-            model = SGC(args.hidden_channels, args.hidden_channels, args.hidden_channels, args.layers, args.dropout, args.K)
-        elif args.model == "gin":
-            model = GIN(args.hidden_channels, args.hidden_channels, args.layers, args.dropout)
-
-        elif args.model == "gcn-v":
-            model = GCN_Virtual(args.hidden_channels, args.hidden_channels,args.hidden_channels, args.layers, args.dropout,
-                                activation=args.activation, JK=args.JK, normalize=False, cached=False)
-
-        elif args.model == "sage-v":
-            model = SAGE_Virtual(args.hidden_channels, args.hidden_channels,args.hidden_channels, args.layers, args.dropout, activation=args.activation,
-                                 JK=args.JK)
-        elif args.model == "appnp":
-            model = APPNP_Net(args.hidden_channels, args.hidden_channels, args)
-        elif args.model == "gdc":
-            model = GDC_Net(args.hidden_channels, args.hidden_channels, args, data.edge_weight)
 
     return model
 

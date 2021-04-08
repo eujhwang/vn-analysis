@@ -108,7 +108,7 @@ def kg_parse_args():
                         help='number of training triples to evaluate eventually')
     parser.add_argument('--neg_size_eval_train', type=int, default=500,
                         help='number of negative samples when evaluating training triples')
-    parser.add_argument('--patience', default=50, type=int)  # ogbn-pro default
-    parser.add_argument('--eval_steps', default=1, type=int)  # ogbn-pro default
+    parser.add_argument('--patience', default=50, type=int)
+    parser.add_argument('--eval_steps', default=5, type=int)
 
     return parser.parse_args()

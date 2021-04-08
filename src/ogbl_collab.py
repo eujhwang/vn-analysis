@@ -87,7 +87,7 @@ def main():
     print("args:", args)
     assert args.model  # must not be empty for node property prediction
     set_seed(args.seed)
-    wandb.init(project='ogbl-collab', entity='smriti')
+    wandb.init()
     wandb.config.update(args, allow_val_change=True)
     args = wandb.config
     trainer = setup(args)
