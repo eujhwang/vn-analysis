@@ -1,0 +1,22 @@
+{
+    "os": "Darwin-19.6.0-x86_64-i386-64bit",
+    "python": "3.7.10",
+    "heartbeatAt": "2021-04-08T06:51:30.424631",
+    "startedAt": "2021-04-08T06:51:29.397012",
+    "docker": null,
+    "cpu_count": 8,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "src/ogbl_collab.py",
+    "codePath": "src/ogbl_collab.py",
+    "git": {
+        "remote": "https://github.com/vthost/ogb-revisited.git",
+        "commit": "2b3010f5f5436a3004c8085e0e5432fe48df0475"
+    },
+    "email": null,
+    "root": "/Users/smritimurali/Desktop/ogb_commit/ogb-revisited",
+    "host": "Smritis-MacBook-Pro.local",
+    "username": "smritimurali",
+    "executable": "/Users/smritimurali/miniconda3/envs/ogb_smriti/bin/python"
+}

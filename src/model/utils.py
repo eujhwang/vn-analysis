@@ -75,6 +75,11 @@ def init_model(args, data, dataset_id, outdim=None):
         elif args.model == "sage-v":
             model = SAGE_Virtual(args.hidden_channels, args.hidden_channels,args.hidden_channels, args.layers, args.dropout, activation=args.activation,
                                  JK=args.JK)
+        elif args.model == "appnp":
+            model = APPNP_Net(args.hidden_channels, args.hidden_channels, args)
+        elif args.model == "gdc":
+            model = GDC_Net(args.hidden_channels, args.hidden_channels, args, data.edge_weight)
+
     return model
 
 

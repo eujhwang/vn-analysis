@@ -144,6 +144,7 @@ def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
     elif dataset_id == "ogbl-collab":
         dataset = PygLinkPropPredDataset(name='ogbl-collab')
         data = dataset[0]
+        print("Collab",data)
         edge_weights=data.edge_weight
         edge_index = data.edge_index
         data.edge_weight = data.edge_weight.view(-1).to(torch.float)
@@ -167,6 +168,7 @@ def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
         dataset = PygLinkPropPredDataset(name='ogbl-ddi',
                                          transform=T.ToSparseTensor())
         data = dataset[0]
+
         device = cuda_if_available(args.device)
         emb = torch.nn.Embedding(data.num_nodes, args.hidden_channels).to(device)
         torch.nn.init.xavier_uniform_(emb.weight)
@@ -174,7 +176,6 @@ def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
         adj_t = data.adj_t.to(device)
         row, col, _ = adj_t.coo()
         data.edge_index = torch.stack([col, row], dim=0)
-
         data_edge_dict = dataset.get_edge_split()
 
     return data, data_edge_dict
