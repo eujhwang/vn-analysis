@@ -29,6 +29,7 @@ def register_default_args(parser, ident):
     parser.add_argument('--layers', type=int, default=2)
     parser.add_argument('--hid_dim', type=int, default=64)
     parser.add_argument('--dropout', type=float, default=0.0)
+    parser.add_argument('--rand_num', type=int, default=0)
 
     parser.add_argument('--seed', type=int, default=random.randint(0, 2 ** 32), help="seed for random number generator")
 

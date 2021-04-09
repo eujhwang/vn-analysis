@@ -145,7 +145,7 @@ class GIN(torch.nn.Module):
 
 class VirtualNode(torch.nn.Module):
     def __init__(self, in_channels, hidden_channels, out_channels, num_layers, dropout, num_virtual_nodes, model,
-                 aggregation="sum", activation="relu", JK="last", normalize=True, cached=False):
+                 rand_num=0, aggregation="sum", activation="relu", JK="last", normalize=True, cached=False):
         super().__init__()
         self.num_layers = num_layers
         self.convs = torch.nn.ModuleList()
@@ -173,8 +173,14 @@ class VirtualNode(torch.nn.Module):
             self.batch_norms.append(BatchNorm1d(out_channels))
 
         self.num_virtual_nodes = num_virtual_nodes
-        self.virtual_node = torch.nn.Embedding(num_virtual_nodes, in_channels)
+        self.virtual_node = torch.nn.Embedding(self.num_virtual_nodes, in_channels)
         torch.nn.init.constant_(self.virtual_node.weight.data, 0) # set the initial virtual node embedding to 0.
+
+        self.rand_num = rand_num
+        if self.rand_num > 0:
+            assert self.rand_num < num_virtual_nodes
+            self.rand_indices = torch.randperm(num_virtual_nodes)[:self.rand_num]
+            self.num_virtual_nodes = self.rand_num
 
         if activation == "relu":
             activation_layer = ReLU()
@@ -186,7 +192,7 @@ class VirtualNode(torch.nn.Module):
             raise ValueError(f"{activation} is unsupported at this time!")
 
         self.virtual_node_mlp = torch.nn.ModuleList()
-        for i in range(num_virtual_nodes):
+        for i in range(self.num_virtual_nodes):
             self.virtual_node_mlp.append(
                 Sequential(
                     Linear(in_channels, 2 * hidden_channels),
@@ -198,7 +204,7 @@ class VirtualNode(torch.nn.Module):
                 )
             )
         for layer in range(num_layers-2):
-            for i in range(num_virtual_nodes):
+            for i in range(self.num_virtual_nodes):
                 self.virtual_node_mlp.append(
                     Sequential(
                         Linear(hidden_channels, 2*hidden_channels),
@@ -225,6 +231,8 @@ class VirtualNode(torch.nn.Module):
         """
         # initialize virtual node to zero
         virtual_node = self.virtual_node(torch.zeros(self.num_virtual_nodes).to(torch.long).to(x.device))
+        if self.rand_num > 0:
+            virtual_node = virtual_node[self.rand_indices]
 
         embs = [x]
         for layer in range(self.num_layers):
@@ -264,97 +272,6 @@ class VirtualNode(torch.nn.Module):
                 emb += embs[layer]
         return emb
 
-
-class SAGE_Virtual(torch.nn.Module):
-    def __init__(self, in_channels, hidden_channels, out_channels, num_layers, dropout, activation="relu", JK="last"):
-        super().__init__()
-        self.num_layers = num_layers
-        self.convs = torch.nn.ModuleList()
-        self.batch_norms = torch.nn.ModuleList()
-        self.convs.append(SAGEConv(in_channels, hidden_channels))
-        self.batch_norms.append(BatchNorm1d(hidden_channels))
-        for _ in range(num_layers - 2):
-            self.convs.append(SAGEConv(hidden_channels, hidden_channels))
-            self.batch_norms.append(BatchNorm1d(hidden_channels))
-        self.convs.append(SAGEConv(hidden_channels, out_channels))
-        self.batch_norms.append(BatchNorm1d(out_channels))
-
-        # set the initial virtual node embedding to 0.
-        self.virtual_node = torch.nn.Embedding(1, in_channels)
-        torch.nn.init.constant_(self.virtual_node.weight.data, 0)
-
-        self.virtual_node_mlp = torch.nn.ModuleList()
-        if activation == "relu":
-            activation_layer = ReLU()
-        elif activation == "leaky":
-            activation_layer = LeakyReLU()
-        elif activation == "elu":
-            activation_layer = ELU()
-        else:
-            raise ValueError(f"{activation} is unsupported at this time!")
-
-        self.virtual_node_mlp.append(
-            Sequential(
-                Linear(in_channels, 2 * hidden_channels),
-                activation_layer,
-                torch.nn.LayerNorm(2 * hidden_channels),
-                Linear(2 * hidden_channels, hidden_channels),
-                activation_layer,
-                torch.nn.LayerNorm(hidden_channels),
-            )
-        )
-        for layer in range(num_layers-2):
-            self.virtual_node_mlp.append(
-                Sequential(
-                    Linear(hidden_channels, 2*hidden_channels),
-                    activation_layer,
-                    torch.nn.LayerNorm(2*hidden_channels),
-                    Linear(2*hidden_channels, hidden_channels),
-                    activation_layer,
-                    torch.nn.LayerNorm(hidden_channels),
-                )
-            )
-
-        self.JK = JK
-        self.dropout = dropout
-
-    def reset_parameters(self):
-        for conv in self.convs:
-            conv.reset_parameters()
-
-    def forward(self, x, adj_t):
-        """
-        x:              [# of nodes, # of features]
-        adj_t:          [# of nodes, # of nodes]
-        virtual_node:   [1, # of features]
-        """
-        # initialize virtual node to zero
-        virtual_node = self.virtual_node(torch.zeros(1).to(torch.long).to(x.device))
-
-        embs = [x]
-        for layer in range(self.num_layers):
-            new_x = embs[layer] + virtual_node      # add message from virtual node
-            new_x = self.convs[layer](new_x, adj_t) # GCN layer
-            new_x = self.batch_norms[layer](new_x)
-            new_x = F.relu(new_x)
-            new_x = F.dropout(new_x, p=self.dropout, training=self.training)
-
-            embs.append(new_x)
-            # update virtual node
-            if layer < self.num_layers-1:
-                # create a node that contains all graph nodes information
-                # virtual_node_tmp: [1, # of features], virtual_node: [1, # of features]
-                virtual_node_tmp = global_add_pool(embs[layer], torch.zeros(1, dtype=torch.int64, device=x.device)) + virtual_node
-                virtual_node = self.virtual_node_mlp[layer](virtual_node_tmp)   # mlp layer
-                virtual_node = F.dropout(virtual_node, self.dropout, training=self.training)
-
-        if self.JK == "last":
-            emb = embs[-1]
-        elif self.JK == "sum":
-            emb = 0
-            for layer in range(1, self.num_layers):
-                emb += embs[layer]
-        return emb
 
 class APPNP_Net(torch.nn.Module):
     # def __init__(self, num_features , num_classes):

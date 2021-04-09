@@ -35,7 +35,8 @@ def init_model(args, data, dataset_id, outdim=None):
         model = GIN(input_dim, args.hid_dim, args.layers, args.dropout)
     elif args.model == "gcn-v" or args.model == "sage-v":
         model = VirtualNode(input_dim, args.hid_dim, outdim, args.layers, args.dropout, args.num_virtual_nodes, args.model,
-                            aggregation=args.aggregation, activation=args.activation, JK=args.JK, normalize=False, cached=False)
+                            rand_num=args.rand_num, aggregation=args.aggregation, activation=args.activation, JK=args.JK,
+                            normalize=False, cached=False)
     elif args.model == "appnp":
         model = APPNP_Net(input_dim, args.hid_dim, args)
     elif args.model == "gdc":
