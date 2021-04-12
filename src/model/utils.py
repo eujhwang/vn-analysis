@@ -1,10 +1,10 @@
 import torch
-from model.gnn import GCN, SAGE, GAT, SGC, GIN, VirtualNode, APPNP_Net,SGC_Net,GDC_Net
+from model.gnn import GCN, SAGE, GAT, SGC, GIN, VirtualNode, APPNP_Net, SGC_Net, GDC_Net, RandomVirtualNode
 
 from model.mlp import MLP
 
 
-def init_model(args, data, dataset_id, outdim=None):
+def init_model(args, data, dataset_id, outdim=None, num_nodes=None):
     model = None
     input_dim = data.num_features
 
@@ -37,6 +37,10 @@ def init_model(args, data, dataset_id, outdim=None):
         model = VirtualNode(input_dim, args.hid_dim, outdim, args.layers, args.dropout, args.num_virtual_nodes, args.model,
                             rand_num=args.rand_num, aggregation=args.aggregation, activation=args.activation, JK=args.JK,
                             normalize=False, cached=False)
+    elif args.model == "gcn-rand-v":
+        model = RandomVirtualNode(input_dim, args.hid_dim, outdim, args.layers, args.dropout, num_nodes, args.num_virtual_nodes,
+                            args.model, rand_num=args.rand_num, aggregation=args.aggregation, activation=args.activation,
+                            JK=args.JK, normalize=False, cached=False)
     elif args.model == "appnp":
         model = APPNP_Net(input_dim, args.hid_dim, args)
     elif args.model == "gdc":
