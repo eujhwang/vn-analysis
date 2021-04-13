@@ -97,6 +97,8 @@ class Trainer:
                 loss = loss_func(pos_out, neg_out)
                 loss.backward()
 
+                if hasattr(self.data, "emb"):
+                    torch.nn.utils.clip_grad_norm_(self.data.emb.parameters(), 1.0)
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
                 torch.nn.utils.clip_grad_norm_(self.predictor.parameters(), 1.0)
 
@@ -171,10 +173,8 @@ class Evaluation:
         eval_start_time = time.time()
         self.model.eval()
         self.predictor.eval()
-        if isinstance(self.model, GDC_Net):
-            h = self.model(self.data.x, self.data.adj_t, self.data.edge_weight)
-        else:
-            h = self.model(self.data.x, self.data.adj_t)
+
+        h = self.model(self.data.x, self.data.adj_t)
 
         pos_valid_edge = self.data_edge_dict['valid']['edge'].to(h.device)
         neg_valid_edge = self.data_edge_dict['valid']['edge_neg'].to(h.device)
@@ -194,10 +194,7 @@ class Evaluation:
         neg_valid_pred = torch.cat(neg_valid_preds, dim=0)
 
         if self.dataset_id == "ogbl-collab":
-            if isinstance(self.model, GDC_Net):
-                h = self.model(self.data.x, self.data.full_adj_t, self.data.edge_weight)
-            else:
-                h = self.model(self.data.x, self.data.full_adj_t)
+            h = self.model(self.data.x, self.data.full_adj_t)
 
         pos_test_preds = []
         for perm in self.test_pos_dataloader:

@@ -125,6 +125,18 @@ def set_seed(seed: int):
 
 
 def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
+
+    # need to do this in between because it changes the edge_index which
+    # we change using trainidx... and use to create adj_t in the sparse transform
+    if args.model.endswith("gdc"):
+        gdc = T.GDC(self_loop_weight=1, normalization_in='sym',
+                    normalization_out='col',
+                    diffusion_kwargs=dict(method='ppr', alpha=args.alpha),
+                    sparsification_kwargs=dict(method='topk', k=args.K,
+                                               dim=0), exact=True)
+    else:  # do nothing
+        gdc = lambda x: x
+
     if dataset_id == "ogbl-ppa":
         dataset = PygLinkPropPredDataset(name=dataset_id, root=data_dir)
         # x: 576289 rows, each 58 dimension, edge_index: [191305, 261775] tensor 가 42463862 개
@@ -140,11 +152,13 @@ def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
             data.edge_index = data.edge_index[:, train_idx1]
 
         data.x = data.x.to(torch.float)
+        data = gdc(data)
         data = ToSparseTensor()(data, data.x.shape[0])
     elif dataset_id == "ogbl-collab":
         dataset = PygLinkPropPredDataset(name='ogbl-collab')
         data = dataset[0]
-        edge_index = data.edge_index
+        data = gdc(data)
+        edge_index = data.edge_index  # TODO VT not sure about this conceptually since we use diffusion merged with valid below
         data.edge_weight = data.edge_weight.view(-1).to(torch.float)
         data = T.ToSparseTensor()(data)
         data_edge_dict = dataset.get_edge_split()
@@ -157,23 +171,19 @@ def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
         else:
             data.full_adj_t = data.adj_t
 
-    elif dataset_id == "ogbl-biokg":
+    elif dataset_id == "ogbl-biokg":  # TODO add gdc later if needed
         dataset = LinkPropPredDataset(name='ogbl-biokg')
         data = dataset[0]
         data_edge_dict = dataset.get_edge_split()
-    if dataset_id == "ogbl-ddi":
+    elif dataset_id == "ogbl-ddi":
         dataset = PygLinkPropPredDataset(name='ogbl-ddi',
-                                         transform=T.ToSparseTensor())
+                                         transform=T.Compose([gdc, T.ToSparseTensor(remove_edge_index=False)]))
         data = dataset[0]
 
         device = cuda_if_available(args.device)
-        emb = torch.nn.Embedding(data.num_nodes, args.hid_dim).to(device)
-        data.emb = emb
-        torch.nn.init.xavier_uniform_(emb.weight)
-        data.x = emb.weight
-        adj_t = data.adj_t.to(device)
-        row, col, _ = adj_t.coo()
-        data.edge_index = torch.stack([col, row], dim=0)
+        data.emb = torch.nn.Embedding(data.num_nodes, args.hid_dim).to(device)
+        torch.nn.init.xavier_uniform_(data.emb.weight)
+        data.x = data.emb.weight  # VT needs to be tested, not fully sure if works like this
         data_edge_dict = dataset.get_edge_split()
 
     return data, data_edge_dict

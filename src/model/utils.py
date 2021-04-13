@@ -22,9 +22,9 @@ def init_model(args, data, dataset_id, outdim=None):
         if args.use_node_embedding:
             embedding = torch.load("model/embedding_{}.pt".format(dataset_id)).to(data.device)  # , map_location='cpu')
             data.x = torch.cat([data.x, embedding], dim=-1)
-    elif args.model == "sage":
+    elif args.model in ["sage", "sage-gdc"]:
         model = SAGE(input_dim, args.hid_dim, outdim, args.layers, args.dropout)
-    elif args.model == "gcn":
+    elif args.model in ["gcn", "gcn-gdc"]:
         if dataset_id == "ogbl-ppa":
             model = GCN(input_dim, args.hid_dim, outdim, args.layers, args.dropout, normalize=False, cached=False)
             precompute_norm(data)
@@ -34,7 +34,7 @@ def init_model(args, data, dataset_id, outdim=None):
         model = GAT(input_dim, args.hid_dim, outdim, args.layers, args.heads, args.dropout)
     elif args.model == "sgc":
         model = SGC(input_dim, args.hid_dim, outdim, args.layers, args.dropout, args.K)
-    elif args.model == "gin":
+    elif args.model in ["gin", "gin-gdc"]:
         model = GIN(input_dim, args.hid_dim, args.layers, args.dropout)
     elif args.model.endswith("-vn"):
         model = VNGNN(input_dim, args.hid_dim, outdim, args.layers, args.dropout, data.num_nodes, data.edge_index, args.model,
@@ -49,7 +49,7 @@ def init_model(args, data, dataset_id, outdim=None):
                             args.model, rand_num=args.rand_num, aggregation=args.aggregation, activation=args.activation,
                             JK=args.JK, normalize=False, cached=False)
     elif args.model == "appnp":
-        model = APPNP_Net(input_dim, args.hid_dim, args)
+        model = APPNP_Net(input_dim, args.hid_dim, outdim, args.K, args.alpha, args.dropout)
     # elif args.model == "gdc":
     #     model = GDC_Net(input_dim, args.hid_dim,args,data.edge_weight)
 
