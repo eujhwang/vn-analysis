@@ -22,11 +22,17 @@ def register_default_args(parser, ident):
     parser.add_argument('--patience', default=50, type=int)  # ogbn-pro default
     parser.add_argument('--log_batch_size', type=int, default=14)  #ogbl-ppa: 14, ddi:16 only
     parser.add_argument('--data_dir', type=str, default="data")
-    parser.add_argument('--use_gdc', action='store_true',
-                        help='Use GDC preprocessing.')
     parser.add_argument('--model', type=str, default="gcn",
                         choices=["mlp", "gcn", "sage", "mlp", "gat", "sgc", "gin", "gcn-v", "gcn-rand-v",
-                                 "sage-v","appnp","gdc"])
+                                 "sage-v",
+                                 "appnp", "gcn-gdc", "sage-gdc", "gin-gdc",
+                                 "gcn-vn", "sage-vn", "gin-vn"])
+    parser.add_argument('--vns', type=int, default=0)
+    parser.add_argument('--vns_conn', type=int, default=3)  # is ignored (always considered 1) with graclus currently
+    parser.add_argument('--vn_idx', type=str, default="full", choices=["full", "random", "graclus"])
+    parser.add_argument('--K', type=int, default=10)
+    parser.add_argument('--alpha', type=float, default=0.5)
+
     parser.add_argument('--layers', type=int, default=2)
     parser.add_argument('--hid_dim', type=int, default=64)
     parser.add_argument('--dropout', type=float, default=0.0)
