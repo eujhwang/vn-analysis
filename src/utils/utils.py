@@ -168,6 +168,7 @@ def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
 
         device = cuda_if_available(args.device)
         emb = torch.nn.Embedding(data.num_nodes, args.hid_dim).to(device)
+        data.emb = emb
         torch.nn.init.xavier_uniform_(emb.weight)
         data.x = emb.weight
         adj_t = data.adj_t.to(device)
@@ -236,3 +237,4 @@ class EarlyStopping:
         else:
             self.value = value
             self.count = 0
+

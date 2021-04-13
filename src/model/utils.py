@@ -1,10 +1,13 @@
 import torch
-from model.gnn import GCN, SAGE, GAT, SGC, GIN, VirtualNode, APPNP_Net, SGC_Net, GDC_Net, RandomVirtualNode
+from torch.nn import ReLU, LeakyReLU, ELU
+from model.baselines import GCN, SAGE, GAT, SGC, GIN, APPNP_Net
+from model.gnn import VirtualNode, RandomVirtualNode
+from model.vngnn import VNGNN
 
 from model.mlp import MLP
 
 
-def init_model(args, data, dataset_id, outdim=None, num_nodes=None):
+def init_model(args, data, dataset_id, outdim=None):
     model = None
     input_dim = data.num_features
 
@@ -33,18 +36,22 @@ def init_model(args, data, dataset_id, outdim=None, num_nodes=None):
         model = SGC(input_dim, args.hid_dim, outdim, args.layers, args.dropout, args.K)
     elif args.model == "gin":
         model = GIN(input_dim, args.hid_dim, args.layers, args.dropout)
+    elif args.model.endswith("-vn"):
+        model = VNGNN(input_dim, args.hid_dim, outdim, args.layers, args.dropout, data.num_nodes, data.edge_index, args.model,
+                      args.vns, args.vns_conn, args.vn_idx, aggregation=args.aggregation, activation=args.activation,
+                      JK=args.JK)  #, normalize=False, cached=False)
     elif args.model == "gcn-v" or args.model == "sage-v":
         model = VirtualNode(input_dim, args.hid_dim, outdim, args.layers, args.dropout, args.num_virtual_nodes, args.model,
                             rand_num=args.rand_num, aggregation=args.aggregation, activation=args.activation, JK=args.JK,
                             normalize=False, cached=False)
     elif args.model == "gcn-rand-v":
-        model = RandomVirtualNode(input_dim, args.hid_dim, outdim, args.layers, args.dropout, num_nodes, args.num_virtual_nodes,
+        model = RandomVirtualNode(input_dim, args.hid_dim, outdim, args.layers, args.dropout, data.num_nodes, args.num_virtual_nodes,
                             args.model, rand_num=args.rand_num, aggregation=args.aggregation, activation=args.activation,
                             JK=args.JK, normalize=False, cached=False)
     elif args.model == "appnp":
         model = APPNP_Net(input_dim, args.hid_dim, args)
-    elif args.model == "gdc":
-        model = GDC_Net(input_dim, args.hid_dim,args,data.edge_weight)
+    # elif args.model == "gdc":
+    #     model = GDC_Net(input_dim, args.hid_dim,args,data.edge_weight)
 
     return model
 
@@ -57,4 +64,3 @@ def precompute_norm(data):
     deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
     adj_t = deg_inv_sqrt.view(-1, 1) * adj * deg_inv_sqrt.view(1, -1)
     data.adj_t = adj_t
-
