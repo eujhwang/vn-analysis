@@ -30,7 +30,7 @@ def register_default_args(parser, ident):
     parser.add_argument('--vns', type=int, default=0)
     parser.add_argument('--vns_conn', type=int, default=3)  # is ignored (always considered 1) with graclus currently
     parser.add_argument('--vn_idx', type=str, default="full", choices=["full", "random", "graclus"])
-    parser.add_argument('--K', type=int, default=10)
+    parser.add_argument('--K', type=int, default=10)  # different meanings in different models
     parser.add_argument('--alpha', type=float, default=0.5)
 
     parser.add_argument('--layers', type=int, default=2)
@@ -42,8 +42,6 @@ def register_default_args(parser, ident):
 
     parser.add_argument('--train_idx', type=str, default="train20",
                         help="train_idx files for ogbl-ppa. train50 : 50% of train data")
-    # ogbl-ppa-SGC
-    parser.add_argument('--K', type=int, default=1, help="K hop for SGC")
 
     # virtual nodes
     parser.add_argument('--JK', type=str, default="last", help="JK aggregation for gcn w/ virtual node")
@@ -62,12 +60,6 @@ def register_default_args(parser, ident):
 
     # ogbl-collab uses node_embedding
     parser.add_argument('--use_valedges_as_input', type=int, default=0, help="0: false, 1: true")
-
-    #appnp
-    parser.add_argument('--hidden', type=int, default=64)
-    parser.add_argument('--alpha', type=float, default=0.1)
-
-
 
 
 def kg_parse_args():
