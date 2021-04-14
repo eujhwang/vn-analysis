@@ -3,7 +3,6 @@ from __future__ import annotations
 import datetime
 from pathlib import Path
 from typing import *
-from model.gnn import GDC_Net
 import torch
 import time
 import wandb
@@ -83,10 +82,7 @@ class Trainer:
             for i, perm in enumerate(tqdm(self.train_dataloader)):
                 # perm: [batch_size]; [16384]
                 self.opt.zero_grad()
-                if isinstance(self.model, GDC_Net):
-                    h = self.model(self.data.x, self.data.adj_t,self.data.edge_weight)
-                else:
-                    h = self.model(self.data.x, self.data.adj_t)
+                h = self.model(self.data.x, self.data.adj_t)
 
                 edge = pos_train_edge[perm].t()
                 pos_out = self.predictor(h[edge[0]], h[edge[1]])

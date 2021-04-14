@@ -43,6 +43,8 @@ def get_vn_index(name, num_ns, num_vns, num_vns_conn, edge_index):
         for i in range(num_ns):
             rand_indices = torch.randperm(num_vns)[:num_vns_conn]
             idx[rand_indices, i] = 1
+    elif name == "random-f":
+        pass
     # elif name == "graclus":
     #     idx = torch.zeros(num_vns, num_ns)
     #     cl = graclus_cluster(edge_index[0], edge_index[1], num_nodes=2)  #num_vns)
@@ -71,13 +73,16 @@ class VNGNN(torch.nn.Module):
             self.batch_norms.append(BatchNorm1d(hidden_channels))
             for _ in range(num_layers - 2):
                 self.convs.append(
-                    get_conv_layer(model, in_channels, hidden_channels, hidden_channels, gcn_normalize=gcn_normalize, gcn_cached=gcn_cached))
+                    get_conv_layer(model, hidden_channels, hidden_channels, hidden_channels, gcn_normalize=gcn_normalize, gcn_cached=gcn_cached))
                 self.batch_norms.append(BatchNorm1d(hidden_channels))
             self.convs.append(
-                get_conv_layer(model, in_channels, hidden_channels, out_channels, gcn_normalize=gcn_normalize, gcn_cached=gcn_cached))
+                get_conv_layer(model, hidden_channels, hidden_channels, out_channels, gcn_normalize=gcn_normalize, gcn_cached=gcn_cached))
         self.batch_norms.append(BatchNorm1d(out_channels))
 
         self.num_virtual_nodes = num_vns
+        self.num_nodes = num_nodes
+        self.num_vns_conn = num_vns_conn
+        self.vn_index_type = vn_idx
         self.virtual_node = torch.nn.Embedding(self.num_virtual_nodes, in_channels)
         torch.nn.init.constant_(self.virtual_node.weight.data, 0)  # set the initial virtual node embedding to 0.
         # index[i] specifies which nodes are connected to VN i
@@ -124,7 +129,17 @@ class VNGNN(torch.nn.Module):
         virtual_node:   [# of virtual nodes, # of features]
         """
         # initialize virtual node to zero
-        virtual_node = self.virtual_node(torch.zeros(self.num_virtual_nodes).to(torch.long).to(x.device))
+        if self.num_virtual_nodes == 0:
+            virtual_node = torch.zeros(1).to(x.device)
+        else:
+            virtual_node = self.virtual_node(torch.zeros(self.num_virtual_nodes).to(torch.long).to(x.device))
+
+        if self.vn_index_type == "random-f":
+            idx = torch.zeros(self.num_virtual_nodes, self.num_nodes)
+            for i in range(self.num_nodes):
+                rand_indices = torch.randperm(self.num_virtual_nodes)[:self.num_vns_conn]
+                idx[rand_indices, i] = 1
+            self.vn_index = (idx == 1)
 
         embs = [x]
         for layer in range(self.num_layers):
@@ -165,7 +180,7 @@ class VNGNN(torch.nn.Module):
                     virtual_node_list.append(virtual_node_mlp)
                 virtual_node = F.dropout(torch.cat(virtual_node_list, dim=0), self.dropout, training=self.training)
 
-        if self.JK == "last":
+        if self.JK == "last" or self.num_layers <= 1:
             emb = embs[-1]
         elif self.JK == "sum":
             emb = 0
