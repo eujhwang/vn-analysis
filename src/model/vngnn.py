@@ -34,6 +34,57 @@ def get_activation(name):
         raise ValueError(f"{name} is unsupported at this time!")
 
 
+def iterative_graclus(num_cl, edge_index):
+    # to test
+    # num_cl = 1
+    # edge_index = torch.LongTensor([[0,0,0,0,5,5,8,8],[1,2,3,4,6,7,9,10]])
+    num_cl1 = max(max(edge_index[0]), max(edge_index[1])).item() + 1  # approx node num
+    num_cl0 = num_cl1 + 1  # dummy
+    edge_index1 = edge_index
+    print("clusters originally:", num_cl1)
+
+    n2cl = torch.LongTensor(list(range(num_cl1)))
+    while num_cl1 > num_cl and num_cl1 < num_cl0:
+        cts = torch.zeros(len(n2cl))
+        # print("*"*20)
+        # print("hoi", num_cl1)
+        # print("ei:")
+        # print(edge_index1[0].tolist())
+        # print(edge_index1[1].tolist())
+        n2cl1 = graclus_cluster(edge_index1[0], edge_index1[1])
+        # update
+        edge_index2 = edge_index1.clone()
+        # print("ass:")
+        # print([i for i in range(len(n2cl1))])
+        # print([i.item() for i in n2cl1], "(learned)")
+        # print(n2cl.tolist(), "(old)")
+        for i in range(len(n2cl1)):
+            # print(i, n2cl[n2cl == i])
+            if n2cl[i].item() == i:
+                n2cl[n2cl == i] = n2cl1[i].item()
+            cts[n2cl[i]] += 1
+            edge_index2[edge_index1 == i] = n2cl1[i].item()
+        # print(n2cl.tolist(),"(new)")
+        edge_index1 = edge_index2
+        num_cl0 = num_cl1
+        num_cl1 = sum(cts > 0).item()
+        print("cluster progress from {} to {}".format(num_cl0, num_cl1))
+    print("clusters finally:", num_cl1)
+    print("requested were:", num_cl)
+    # print(n2cl.tolist())
+    # now assign ids from 0 to num_cluster
+    c = 0  # first correct cluster id
+    for i in range(len(n2cl1)):
+        if i in n2cl:
+            if i > c:
+                n2cl[n2cl == i] = c
+                c += 1
+            elif i == c:
+                c += 1
+    # print(n2cl.tolist())
+    return n2cl
+
+
 def get_vn_index(name, num_ns, num_vns, num_vns_conn, edge_index):
     idx = None
     if name == "full":
@@ -45,12 +96,16 @@ def get_vn_index(name, num_ns, num_vns, num_vns_conn, edge_index):
             idx[rand_indices, i] = 1
     elif name == "random-f":
         pass
-    # elif name == "graclus":
-    #     idx = torch.zeros(num_vns, num_ns)
-    #     cl = graclus_cluster(edge_index[0], edge_index[1], num_nodes=2)  #num_vns)
-    #     for i in range(num_ns):
-    #         rand_indices = torch.randperm(num_vns)[:num_vns_conn]
-    #         idx[rand_indices, i] = 1
+    elif name == "graclus":
+        n2cl = iterative_graclus(num_vns, edge_index)
+        diff = num_ns - len(n2cl)
+        if diff > 0:  # if there are some nodes with ids > max id in edge_index, we don't have cluster ids for them yet
+            startid = max(n2cl).item() + 1
+            n2cl = torch.cat([n2cl, torch.LongTensor([i for i in range(startid, startid+diff)])], dim=0)
+        num_vns = max(n2cl).item() + 1
+        idx = torch.zeros(num_vns, num_ns)
+        for i in range(num_vns):
+            idx[i][n2cl == i] = 1
     else:
         raise ValueError(f"{name} is unsupported at this time!")
 
@@ -79,14 +134,14 @@ class VNGNN(torch.nn.Module):
                 get_conv_layer(model, hidden_channels, hidden_channels, out_channels, gcn_normalize=gcn_normalize, gcn_cached=gcn_cached))
         self.batch_norms.append(BatchNorm1d(out_channels))
 
-        self.num_virtual_nodes = num_vns
         self.num_nodes = num_nodes
         self.num_vns_conn = num_vns_conn
         self.vn_index_type = vn_idx
-        self.virtual_node = torch.nn.Embedding(self.num_virtual_nodes, in_channels)
-        torch.nn.init.constant_(self.virtual_node.weight.data, 0)  # set the initial virtual node embedding to 0.
         # index[i] specifies which nodes are connected to VN i
         self.vn_index = get_vn_index(vn_idx, num_nodes, num_vns, num_vns_conn, edge_index)
+        self.num_virtual_nodes = self.vn_index.shape[0]  # might be > as num_vns in case we cannot split into less with graclus...
+        self.virtual_node = torch.nn.Embedding(self.num_virtual_nodes, in_channels)
+        torch.nn.init.constant_(self.virtual_node.weight.data, 0)  # set the initial virtual node embedding to 0.
 
         activation_layer = get_activation(activation)
         self.virtual_node_mlp = torch.nn.ModuleList()
@@ -135,6 +190,7 @@ class VNGNN(torch.nn.Module):
             virtual_node = self.virtual_node(torch.zeros(self.num_virtual_nodes).to(torch.long).to(x.device))
 
         if self.vn_index_type == "random-f":
+            # self.vn_index = get_vn_index("random", self.num_nodes, self.num_virtual_nodes, self.num_vns_conn, None):
             idx = torch.zeros(self.num_virtual_nodes, self.num_nodes)
             for i in range(self.num_nodes):
                 rand_indices = torch.randperm(self.num_virtual_nodes)[:self.num_vns_conn]
