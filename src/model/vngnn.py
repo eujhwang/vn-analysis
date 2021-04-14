@@ -6,7 +6,7 @@ from torch_geometric.nn import GCNConv, SAGEConv, GINConv, global_mean_pool, glo
 from torch_cluster import graclus_cluster
 
 
-def get_conv_layer(name, in_channels, hidden_channels, out_channels, gcn_normalize=False, gcn_cached=False):
+def get_conv_layer(name, in_channels, hidden_channels, out_channels, gcn_normalize, gcn_cached):
     if name.startswith("gcn"):
         return GCNConv(in_channels, out_channels, normalize=gcn_normalize, cached=gcn_cached)
     elif name.startswith("sage"):
@@ -190,12 +190,7 @@ class VNGNN(torch.nn.Module):
             virtual_node = self.virtual_node(torch.zeros(self.num_virtual_nodes).to(torch.long).to(x.device))
 
         if self.vn_index_type == "random-f":
-            # self.vn_index = get_vn_index("random", self.num_nodes, self.num_virtual_nodes, self.num_vns_conn, None):
-            idx = torch.zeros(self.num_virtual_nodes, self.num_nodes)
-            for i in range(self.num_nodes):
-                rand_indices = torch.randperm(self.num_virtual_nodes)[:self.num_vns_conn]
-                idx[rand_indices, i] = 1
-            self.vn_index = (idx == 1)
+            self.vn_index = get_vn_index("random", self.num_nodes, self.num_virtual_nodes, self.num_vns_conn, None)
 
         embs = [x]
         for layer in range(self.num_layers):

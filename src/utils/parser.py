@@ -58,6 +58,8 @@ def register_default_args(parser, ident):
     # ogbl-collab uses node_embedding
     parser.add_argument('--use_valedges_as_input', type=int, default=0, help="0: false, 1: true")
 
+    parser.add_argument('--gcn_normalize', type=int, default=1, help="0: false, 1: true")
+    parser.add_argument('--gcn_cached', type=int, default=0, help="0: false, 1: true")
 
 def kg_parse_args():
     parser = argparse.ArgumentParser(
