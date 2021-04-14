@@ -95,7 +95,7 @@ def get_vn_index(name, num_ns, num_vns, num_vns_conn, edge_index):
             rand_indices = torch.randperm(num_vns)[:num_vns_conn]
             idx[rand_indices, i] = 1
     elif name == "random-f":
-        pass
+        idx = torch.zeros(num_vns, num_ns)
     elif name == "graclus":
         n2cl = iterative_graclus(num_vns, edge_index)
         diff = num_ns - len(n2cl)
