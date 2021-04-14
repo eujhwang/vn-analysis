@@ -23,20 +23,18 @@ def register_default_args(parser, ident):
     parser.add_argument('--log_batch_size', type=int, default=14)  #ogbl-ppa: 14, ddi:16 only
     parser.add_argument('--data_dir', type=str, default="data")
     parser.add_argument('--model', type=str, default="gcn",
-                        choices=["mlp", "gcn", "sage", "mlp", "gat", "sgc", "gin", "gcn-v", "gcn-rand-v",
-                                 "sage-v",
+                        choices=["mlp", "gcn", "sage", "mlp", "gat", "sgc", "gin",
                                  "appnp", "gcn-gdc", "sage-gdc", "gin-gdc",
                                  "gcn-vn", "sage-vn", "gin-vn"])
     parser.add_argument('--vns', type=int, default=0)
     parser.add_argument('--vns_conn', type=int, default=3)  # is ignored (always considered 1) with graclus currently
-    parser.add_argument('--vn_idx', type=str, default="full", choices=["full", "random", "graclus"])
+    parser.add_argument('--vn_idx', type=str, default="full", choices=["full", "random", "graclus", "random-f"])
     parser.add_argument('--K', type=int, default=10)  # different meanings in different models
     parser.add_argument('--alpha', type=float, default=0.5)
 
     parser.add_argument('--layers', type=int, default=2)
     parser.add_argument('--hid_dim', type=int, default=64)
     parser.add_argument('--dropout', type=float, default=0.0)
-    parser.add_argument('--rand_num', type=int, default=0)
 
     parser.add_argument('--seed', type=int, default=random.randint(0, 2 ** 32), help="seed for random number generator")
 
@@ -44,12 +42,11 @@ def register_default_args(parser, ident):
                         help="train_idx files for ogbl-ppa. train50 : 50% of train data")
 
     # virtual nodes
-    parser.add_argument('--JK', type=str, default="last", help="JK aggregation for gcn w/ virtual node")
-    parser.add_argument('--activation', type=str, default="relu", choices=["relu","leaky", "elu"],
+    parser.add_argument('--JK', type=str, default="last", choices=["last", "sum"], help="how to combine nodes at the end")
+    parser.add_argument('--activation', type=str, default="relu", choices=["relu", "leaky", "elu"],
                         help="activation layer for gnn-v relu: ReLU, leaky: LeakyReLU, elu: ELU")
     parser.add_argument('--aggregation', type=str, default="sum", choices=["sum", "mean", "max"],
-                        help="aggregation rule for virtual nodes")
-    parser.add_argument('--num_virtual_nodes', type=int, default=1, help="number of virtual node for virtual node model")
+                        help="aggregation for virtual nodes")
 
     # LinkPredictor uses lp_layers
     parser.add_argument('--lp_layers', type=int, default=3)
