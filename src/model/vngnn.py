@@ -2,7 +2,8 @@ from typing import Optional
 import torch
 import torch.nn.functional as F
 from torch.nn import Sequential, Linear, ReLU, Conv2d, BatchNorm1d, LeakyReLU, Softplus, ELU
-from torch_geometric.nn import GCNConv, SAGEConv, GINConv, global_mean_pool, global_add_pool
+from torch_geometric.nn import GCNConv, SAGEConv, GINConv, global_mean_pool, global_add_pool, global_max_pool, \
+    GlobalAttention
 from torch_cluster import graclus_cluster
 
 
@@ -32,6 +33,18 @@ def get_activation(name):
         return ELU()
     else:
         raise ValueError(f"{name} is unsupported at this time!")
+
+
+def get_graph_pooling(name):
+    if name == "sum":
+        pool = global_add_pool
+    elif name == "mean":
+        pool = global_mean_pool
+    elif name == "max":
+        pool = global_max_pool
+    else:
+        raise ValueError(f"graph pooling - {name} is unsupported at this time!")
+    return pool
 
 
 def iterative_graclus(num_cl, edge_index):
@@ -115,7 +128,7 @@ def get_vn_index(name, num_ns, num_vns, num_vns_conn, edge_index):
 class VNGNN(torch.nn.Module):
     def __init__(self, in_channels, hidden_channels, out_channels, num_layers, dropout, num_nodes, edge_index,
                  model, num_vns=1, num_vns_conn=1, vn_idx="full",  # maybe choose a better name for this parameter...
-                 aggregation="sum", activation="relu", JK="last", gcn_normalize=True, gcn_cached=False):
+                 aggregation="sum", graph_pool="sum", activation="relu", JK="last", gcn_normalize=True, gcn_cached=False):
         super().__init__()
         self.num_layers = num_layers
         self.convs = torch.nn.ModuleList()
@@ -142,6 +155,8 @@ class VNGNN(torch.nn.Module):
         self.num_virtual_nodes = self.vn_index.shape[0]  # might be > as num_vns in case we cannot split into less with graclus...
         self.virtual_node = torch.nn.Embedding(self.num_virtual_nodes, in_channels)
         torch.nn.init.constant_(self.virtual_node.weight.data, 0)  # set the initial virtual node embedding to 0.
+
+        self.graph_pooling_layer = get_graph_pooling(graph_pool)
 
         activation_layer = get_activation(activation)
         self.virtual_node_mlp = torch.nn.ModuleList()
@@ -218,7 +233,7 @@ class VNGNN(torch.nn.Module):
                 for v in range(self.num_virtual_nodes):
                     # [1, # of features] -> [1, hid_dim]
                     # select only related nodes using vn_index == 1
-                    virtual_node_tmp = global_add_pool(embs[layer][self.vn_index[v]].squeeze(),
+                    virtual_node_tmp = self.graph_pooling_layer(embs[layer][self.vn_index[v]].squeeze(),
                                                        torch.zeros(1, dtype=torch.int64, device=x.device))
                     virtual_node_tmp_list.append(virtual_node_tmp)
                 virtual_node_tmp = torch.cat(virtual_node_tmp_list, dim=0) + virtual_node

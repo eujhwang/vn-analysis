@@ -38,7 +38,7 @@ def register_default_args(parser, ident):
 
     parser.add_argument('--seed', type=int, default=random.randint(0, 2 ** 32), help="seed for random number generator")
 
-    parser.add_argument('--train_idx', type=str, default="train20",
+    parser.add_argument('--train_idx', type=str, default="train10",
                         help="train_idx files for ogbl-ppa. train50 : 50% of train data")
 
     # virtual nodes
@@ -47,6 +47,8 @@ def register_default_args(parser, ident):
                         help="activation layer for gnn-v relu: ReLU, leaky: LeakyReLU, elu: ELU")
     parser.add_argument('--aggregation', type=str, default="sum", choices=["sum", "mean", "max"],
                         help="aggregation for virtual nodes")
+    parser.add_argument('--graph_pooling', type=str, default="sum", choices=["sum", "mean", "max"],
+                        help="aggregation for graph nodes")
 
     # LinkPredictor uses lp_layers
     parser.add_argument('--lp_layers', type=int, default=3)
