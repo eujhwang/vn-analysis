@@ -163,6 +163,7 @@ def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
         data = T.ToSparseTensor()(data)
         data_edge_dict = dataset.get_edge_split()
 
+        data.edge_index = edge_index # for graclus
         if args.use_valedges_as_input:
             val_edge_index = data_edge_dict["valid"]["edge"].t()
             full_edge_index = torch.cat([edge_index, val_edge_index], dim=-1)

@@ -233,7 +233,7 @@ class VNGNN(torch.nn.Module):
                 for v in range(self.num_virtual_nodes):
                     # [1, # of features] -> [1, hid_dim]
                     # select only related nodes using vn_index == 1
-                    virtual_node_tmp = self.graph_pooling_layer(embs[layer][self.vn_index[v]].squeeze(),
+                    virtual_node_tmp = self.graph_pooling_layer(embs[layer][self.vn_index[v]],
                                                        torch.zeros(1, dtype=torch.int64, device=x.device))
                     virtual_node_tmp_list.append(virtual_node_tmp)
                 virtual_node_tmp = torch.cat(virtual_node_tmp_list, dim=0) + virtual_node
