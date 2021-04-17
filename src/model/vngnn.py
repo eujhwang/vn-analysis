@@ -219,9 +219,8 @@ class VNGNN(torch.nn.Module):
             new_x = embs[layer] + aggregated_virtual_node  # add message from virtual node
             new_x = self.convs[layer](new_x, adj_t)  # GCN layer
             new_x = self.batch_norms[layer](new_x)
-            if layer != self.num_layers-1:
-                new_x = F.relu(new_x)
-                new_x = F.dropout(new_x, p=self.dropout, training=self.training)
+            new_x = F.relu(new_x)
+            new_x = F.dropout(new_x, p=self.dropout, training=self.training)
 
             embs.append(new_x)
             # update virtual node
