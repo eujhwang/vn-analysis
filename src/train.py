@@ -87,7 +87,11 @@ class Trainer:
                 edge = pos_train_edge[perm].t()
                 pos_out = self.predictor(h[edge[0]], h[edge[1]])
 
-                edge = torch.randint(0, self.data.num_nodes, edge.size(), dtype=torch.long, device=h.device)
+                if self.dataset_id == "ogbl-ddi":
+                    edge = negative_sampling(self.data.edge_index, num_nodes=self.data.x.size(0),
+                                             num_neg_samples=perm.size(0), method="dense")
+                else:
+                    edge = torch.randint(0, self.data.num_nodes, edge.size(), dtype=torch.long, device=h.device)
                 neg_out = self.predictor(h[edge[0]], h[edge[1]])
 
                 loss = loss_func(pos_out, neg_out)
