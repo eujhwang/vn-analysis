@@ -11,6 +11,8 @@ from torch_sparse import SparseTensor
 import torch_geometric.transforms as T
 import pandas as pd
 from utils.to_dense import ToDense
+from model.pgnn_utils import PGNN_Transform
+
 
 def save_args(args, fn):
     with open(fn, 'w') as f:
@@ -94,6 +96,9 @@ def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
     elif args.model.endswith("-vn") and args.vn_idx == "diffpool":
         # precompute attribute "adj"
         transform = ToDense(remove_edge_index=False)
+    elif args.model == "pgnn":
+        # precompute anchors, distances
+        transform = PGNN_Transform(args.layers, args.anchors, args.approximate)
     else:  # do nothing
         transform = lambda x: x
 

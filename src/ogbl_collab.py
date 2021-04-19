@@ -41,11 +41,11 @@ def setup(args):
     train_dataloader, valid_pos_dataloader, valid_neg_dataloader, test_pos_dataloader, test_neg_dataloader = create_dataloader(data_edge_dict, args.log_batch_size)
 
     model = init_model(args, data, dataset_id, outdim=None)
-    model = model.to(device)
+    model, predictor = model.to(device)
+    predictor = predictor.to(device)
 
     wandb.watch(model)
 
-    predictor = LinkPredictor(args.hid_dim, args.hid_dim, 1, args.lp_layers, args.dropout).to(device)
     optimizer = torch.optim.Adam(list(model.parameters()) + list(predictor.parameters()), lr=args.lr)
     early_stopping = EarlyStopping("Accuracy", patience=args.patience)
 

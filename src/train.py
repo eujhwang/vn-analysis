@@ -22,6 +22,7 @@ class Trainer:
         dataset_id: str,
         data: Any,
         data_edge_dict: Dict[str, Tensor],
+        # epoch_transform: Module,
         model: Module,
         model_type: str,
         predictor: Module,
@@ -38,6 +39,7 @@ class Trainer:
         self.dataset_id = dataset_id
         self.data = data
         self.data_edge_dict = data_edge_dict
+        # self.epoch_transform = epoch_transform
         self.model = model
         self.model_type = model_type
         self.predictor = predictor
@@ -76,6 +78,9 @@ class Trainer:
             epoch_start_time = time.time()
             self.model.train()
             self.predictor.train()
+
+            # if self.epoch_transform is not None:
+            #     self.data = self.epoch_transform(self.data)
 
             total_loss = []
             pos_train_preds = []

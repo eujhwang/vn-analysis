@@ -1,8 +1,9 @@
 import torch
 from model.baselines import GCN, SAGE, GAT, SGC, GIN, APPNP_Net
+from model.pgnn import PGNN, PGNN_LinkPredictor
 from model.vngnn import VNGNN
 
-from model.mlp import MLP
+from model.mlp import MLP, LinkPredictor
 
 
 def init_model(args, data, dataset_id, outdim=None):
@@ -40,10 +41,15 @@ def init_model(args, data, dataset_id, outdim=None):
                       JK=args.JK, gcn_normalize=args.gcn_normalize, gcn_cached=args.gcn_cached)  #, normalize=False, cached=False)
     elif args.model == "appnp":
         model = APPNP_Net(input_dim, args.hid_dim, outdim, args.K, args.alpha, args.dropout)
-    # elif args.model == "gdc":
-    #     model = GDC_Net(input_dim, args.hid_dim,args,data.edge_weight)
+    elif args.model == "pgnn":
+        model = PGNN(input_dim, args.hid_dim, outdim, args.layers, args.dropout)
 
-    return model
+    if args.model == "pgnn":
+        predictor = PGNN_LinkPredictor()
+    else:
+        predictor = LinkPredictor(args.hid_dim, args.hid_dim, 1, args.lp_layers, args.dropout)
+
+    return model, predictor
 
 
 def precompute_norm(data):
