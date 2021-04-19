@@ -154,7 +154,7 @@ class VNGNN(torch.nn.Module):
         self.vn_index_type = vn_idx
         # index[i] specifies which nodes are connected to VN i
         self.vn_index = get_vn_index(vn_idx, num_nodes, num_vns, num_vns_conn, edge_index)
-        self.num_virtual_nodes = self.vn_index.shape[0]  if self.vn_index is not None else num_vns  # might be > as num_vns in case we cannot split into less with graclus...
+        self.num_virtual_nodes = self.vn_index.shape[0] if self.vn_index is not None else num_vns  # might be > as num_vns in case we cannot split into less with graclus...
         self.virtual_node = torch.nn.Embedding(self.num_virtual_nodes, in_channels)
         torch.nn.init.constant_(self.virtual_node.weight.data, 0)  # set the initial virtual node embedding to 0.
 
