@@ -10,50 +10,7 @@ from ogb.linkproppred import PygLinkPropPredDataset, LinkPropPredDataset
 from torch_sparse import SparseTensor
 import torch_geometric.transforms as T
 import pandas as pd
-
-class ToSparseTensor(object):
-    r"""Converts the :obj:`edge_index` attribute of a data object into a
-    (transposed) :class:`torch_sparse.SparseTensor` type with key
-    :obj:`adj_.t`.
-
-    Args:
-        remove_faces (bool, optional): If set to :obj:`False`, the
-            :obj:`edge_index` tensor will not be removed.
-    """
-    def __init__(self, remove_edge_index: bool = True):
-        self.remove_edge_index = remove_edge_index
-
-    def __call__(self, data, num_nodes):
-        assert data.edge_index is not None
-
-        (row, col), N, E = data.edge_index, num_nodes, data.num_edges
-        perm = (col * N + row).argsort()
-        row, col = row[perm], col[perm]
-
-        if self.remove_edge_index:
-            data.edge_index = None
-
-        value = None
-        for key in ['edge_weight', 'edge_attr', 'edge_type']:
-            if data[key] is not None:
-                value = data[key][perm]
-                if self.remove_edge_index:
-                    data[key] = None
-                break
-
-        for key, item in data:
-            if item.size(0) == E:
-                data[key] = item[perm]
-
-        data.adj_t = SparseTensor(row=col, col=row, value=value,
-                                  sparse_sizes=(N, N), is_sorted=True)
-
-        # Pre-process some important attributes.
-        data.adj_t.storage.rowptr()
-        data.adj_t.storage.csr2csc()
-
-        return data
-
+from utils.to_dense import ToDense
 
 def save_args(args, fn):
     with open(fn, 'w') as f:
@@ -126,16 +83,19 @@ def set_seed(seed: int):
 
 def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
 
-    # need to do this in between because it changes the edge_index which
-    # we change using trainidx... and use to create adj_t in the sparse transform
     if args.model.endswith("gdc"):
-        gdc = T.GDC(self_loop_weight=1, normalization_in='sym',
+        # need to do this in between because it changes the edge_index which
+        # we change using trainidx... and use to create adj_t in the sparse transform
+        transform = T.GDC(self_loop_weight=1, normalization_in='sym',
                     normalization_out='col',
                     diffusion_kwargs=dict(method='ppr', alpha=args.alpha),
                     sparsification_kwargs=dict(method='topk', k=args.K,
                                                dim=0), exact=True)
+    elif args.model.endswith("-vn") and args.vn_idx == "diffpool":
+        # precompute attribute "adj"
+        transform = ToDense(remove_edge_index=False)
     else:  # do nothing
-        gdc = lambda x: x
+        transform = lambda x: x
 
     if dataset_id == "ogbl-ppa":
         dataset = PygLinkPropPredDataset(name=dataset_id, root=data_dir)
@@ -152,12 +112,12 @@ def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
             data.edge_index = data.edge_index[:, train_idx1]
 
         data.x = data.x.to(torch.float)
-        data = gdc(data)
+        data = transform(data)
         data = ToSparseTensor()(data, data.x.shape[0])
     elif dataset_id == "ogbl-collab":
         dataset = PygLinkPropPredDataset(name='ogbl-collab')
         data = dataset[0]
-        data = gdc(data)
+        data = transform(data)
         edge_index = data.edge_index  # TODO VT not sure about this conceptually since we use diffusion merged with valid below
         data.edge_weight = data.edge_weight.view(-1).to(torch.float)
         data = T.ToSparseTensor()(data)
@@ -178,7 +138,7 @@ def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
         data_edge_dict = dataset.get_edge_split()
     elif dataset_id == "ogbl-ddi":
         dataset = PygLinkPropPredDataset(name='ogbl-ddi',
-                                         transform=T.Compose([gdc, T.ToSparseTensor(remove_edge_index=False)]))
+                                         transform=T.Compose([transform, T.ToSparseTensor(remove_edge_index=False)]))
         data = dataset[0]
 
         device = cuda_if_available(args.device)

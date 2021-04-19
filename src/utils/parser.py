@@ -28,7 +28,7 @@ def register_default_args(parser, ident):
                                  "gcn-vn", "sage-vn", "gin-vn"])
     parser.add_argument('--vns', type=int, default=0)
     parser.add_argument('--vns_conn', type=int, default=3)  # is ignored (always considered 1) with graclus currently
-    parser.add_argument('--vn_idx', type=str, default="full", choices=["full", "random", "graclus", "random-f"])
+    parser.add_argument('--vn_idx', type=str, default="full", choices=["full", "random", "random-f", "graclus", "diffpool"])
     parser.add_argument('--K', type=int, default=10)  # different meanings in different models
     parser.add_argument('--alpha', type=float, default=0.5)
 

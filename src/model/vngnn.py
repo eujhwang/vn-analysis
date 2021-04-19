@@ -5,7 +5,7 @@ from torch.nn import Sequential, Linear, ReLU, Conv2d, BatchNorm1d, LeakyReLU, S
 from torch_geometric.nn import GCNConv, SAGEConv, GINConv, global_mean_pool, global_add_pool, global_max_pool, \
     GlobalAttention
 from torch_cluster import graclus_cluster
-
+from model.diff_pool_iterative import iterative_diff_pool
 
 def get_conv_layer(name, in_channels, hidden_channels, out_channels, gcn_normalize, gcn_cached):
     if name.startswith("gcn"):
@@ -107,8 +107,8 @@ def get_vn_index(name, num_ns, num_vns, num_vns_conn, edge_index):
         for i in range(num_ns):
             rand_indices = torch.randperm(num_vns)[:num_vns_conn]
             idx[rand_indices, i] = 1
-    elif name == "random-f":
-        idx = torch.zeros(num_vns, num_ns)
+    elif name == "random-f" or name == "diffpool":
+        return None
     elif name == "graclus":
         n2cl = iterative_graclus(num_vns, edge_index)
         diff = num_ns - len(n2cl)
@@ -134,6 +134,8 @@ class VNGNN(torch.nn.Module):
         self.convs = torch.nn.ModuleList()
         self.batch_norms = torch.nn.ModuleList()
 
+        assert vn_idx != "graclus" or num_vns_conn == 1, "graclus only works with num_vns_conn = 1"
+
         if num_layers == 1:
             self.convs.append(get_conv_layer(model, in_channels, hidden_channels, out_channels, gcn_normalize=gcn_normalize, gcn_cached=gcn_cached))
         else:
@@ -152,7 +154,7 @@ class VNGNN(torch.nn.Module):
         self.vn_index_type = vn_idx
         # index[i] specifies which nodes are connected to VN i
         self.vn_index = get_vn_index(vn_idx, num_nodes, num_vns, num_vns_conn, edge_index)
-        self.num_virtual_nodes = self.vn_index.shape[0]  # might be > as num_vns in case we cannot split into less with graclus...
+        self.num_virtual_nodes = self.vn_index.shape[0]  if self.vn_index is not None else num_vns  # might be > as num_vns in case we cannot split into less with graclus...
         self.virtual_node = torch.nn.Embedding(self.num_virtual_nodes, in_channels)
         torch.nn.init.constant_(self.virtual_node.weight.data, 0)  # set the initial virtual node embedding to 0.
 
@@ -198,7 +200,7 @@ class VNGNN(torch.nn.Module):
         adj_t:          [# of nodes, # of nodes]
         virtual_node:   [# of virtual nodes, # of features]
         """
-        x, adj_t = data.x, data.adj_t
+        x, adj_t, adj = data.x, data.adj_t, data.adj
         # initialize virtual node to zero
         if self.num_virtual_nodes == 0:
             virtual_node = torch.zeros(1).to(x.device)
@@ -207,6 +209,8 @@ class VNGNN(torch.nn.Module):
 
         if self.vn_index_type == "random-f":
             self.vn_index = get_vn_index("random", self.num_nodes, self.num_virtual_nodes, self.num_vns_conn, None)
+        elif self.vn_index == None and self.vn_index_type == "diffpool":  # currengtlhy the second condition is always true
+            self.vn_index = iterative_diff_pool(self.num_virtual_nodes, self.num_vns_conn, x, adj)
 
         embs = [x]
         for layer in range(self.num_layers):
