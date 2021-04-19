@@ -1,6 +1,7 @@
 import torch
 from model.baselines import GCN, SAGE, GAT, SGC, GIN, APPNP_Net
 from model.pgnn import PGNN, PGNN_LinkPredictor
+from model.kgnn import GNN123
 from model.vngnn import VNGNN
 
 from model.mlp import MLP, LinkPredictor
@@ -43,6 +44,10 @@ def init_model(args, data, dataset_id, outdim=None):
         model = APPNP_Net(input_dim, args.hid_dim, outdim, args.K, args.alpha, args.dropout)
     elif args.model == "pgnn":
         model = PGNN(input_dim, args.hid_dim, outdim, args.layers, args.dropout)
+    elif args.model == "123gnn":
+        model = GNN123(input_dim, outdim, data.iso_type_2.max().item() + 1, data.iso_type_3.max().item() + 1)
+    else:
+        raise ValueError(f"{args.model} is not supported at this time!")
 
     if args.model == "pgnn":
         predictor = PGNN_LinkPredictor()

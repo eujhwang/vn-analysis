@@ -24,7 +24,7 @@ def register_default_args(parser, ident):
     parser.add_argument('--data_dir', type=str, default="data")
     parser.add_argument('--model', type=str, default="gcn",
                         choices=["mlp", "gcn", "sage", "mlp", "gat", "sgc", "gin",
-                                 "appnp", "gcn-gdc", "sage-gdc", "gin-gdc", "pgnn",
+                                 "appnp", "gcn-gdc", "sage-gdc", "gin-gdc", "pgnn", "123gnn",
                                  "gcn-vn", "sage-vn", "gin-vn"])
     parser.add_argument('--vns', type=int, default=0)
     parser.add_argument('--vns_conn', type=int, default=3)  # is ignored (always considered 1) with graclus currently

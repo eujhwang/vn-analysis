@@ -2,17 +2,18 @@ import logging
 import os
 import random
 import warnings
+import torch
 from pathlib import Path
 from typing import *
-
-import torch
 from ogb.linkproppred import PygLinkPropPredDataset, LinkPropPredDataset
 from torch_sparse import SparseTensor
 import torch_geometric.transforms as T
 import pandas as pd
-from utils.to_dense import ToDense
-from model.pgnn_utils import PGNN_Transform
 
+from utils.to_dense import ToDense
+from utils.to_sparse_tensor import ToSparseTensor
+from model.pgnn_utils import PGNN_Transform
+from model.kgnn_transform import TwoMalkin, ConnectedThreeMalkin
 
 def save_args(args, fn):
     with open(fn, 'w') as f:
@@ -99,6 +100,9 @@ def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
     elif args.model == "pgnn":
         # precompute anchors, distances
         transform = PGNN_Transform(args.layers, args.anchors, args.approximate)
+    elif args.model == "123gnn":
+        # this just adds attributes to data based on edge_index
+        transform = T.Compose([TwoMalkin(), ConnectedThreeMalkin()])
     else:  # do nothing
         transform = lambda x: x
 
