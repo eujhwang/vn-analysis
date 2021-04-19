@@ -26,7 +26,8 @@ class GCN(torch.nn.Module):
         for conv in self.convs:
             conv.reset_parameters()
 
-    def forward(self, x, adj_t):
+    def forward(self, data):
+        x, adj_t = data.x, data.adj_t
         for conv in self.convs[:-1]:
             x = conv(x, adj_t)
             x = F.relu(x)
@@ -51,7 +52,8 @@ class SAGE(torch.nn.Module):
         for conv in self.convs:
             conv.reset_parameters()
 
-    def forward(self, x, adj_t):
+    def forward(self, data):
+        x, adj_t = data.x, data.adj_t
         for conv in self.convs[:-1]:
             x = conv(x, adj_t)
             x = F.relu(x)
@@ -96,7 +98,8 @@ class GIN(torch.nn.Module):
             if isinstance(conv, Linear):
                 conv.reset_parameters()
 
-    def forward(self, x, adj_t):
+    def forward(self, data):
+        x, adj_t = data.x, data.adj_t
         for i, conv in enumerate(self.convs):
             x = conv(x, adj_t)
             x = F.relu(x)
@@ -119,7 +122,8 @@ class GAT(torch.nn.Module):
         for conv in self.convs:
             conv.reset_parameters()
 
-    def forward(self, x, adj_t):
+    def forward(self, data):
+        x, adj_t = data.x, data.adj_t
         for conv in self.convs[:-1]:
             x = F.elu(conv(x, adj_t))
             x = F.dropout(x, p=self.dropout, training=self.training)
@@ -136,7 +140,8 @@ class SGC(torch.nn.Module):
     def reset_parameters(self):
         self.conv.reset_parameters()
 
-    def forward(self, x, adj_t):
+    def forward(self, data):
+        x, adj_t = data.x, data.adj_t
         x = self.conv(x, adj_t)
         x = F.relu(x)
         x = F.dropout(x, p=self.dropout, training=self.training)
@@ -156,8 +161,8 @@ class APPNP_Net(torch.nn.Module):
         self.lin1.reset_parameters()
         self.lin2.reset_parameters()
 
-    def forward(self, x, adj_t):
-        x, edge_index = x, adj_t
+    def forward(self, data):
+        x, edge_index = data.x, data.edge_index
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = F.relu(self.lin1(x))
         x = F.dropout(x, p=self.dropout, training=self.training)

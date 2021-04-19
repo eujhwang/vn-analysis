@@ -82,7 +82,7 @@ class Trainer:
             for i, perm in enumerate(tqdm(self.train_dataloader)):
                 # perm: [batch_size]; [16384]
                 self.opt.zero_grad()
-                h = self.model(self.data.x, self.data.adj_t)
+                h = self.model(self.data)
 
                 edge = pos_train_edge[perm].t()
                 pos_out = self.predictor(h[edge[0]], h[edge[1]])
@@ -165,7 +165,7 @@ class Evaluation:
         self.test_pos_dataloader = test_pos_dataloader
         self.test_neg_dataloader = test_neg_dataloader
 
-        self._evaulator = Evaluator(name=dataset_id)
+        self._evaluator = Evaluator(name=dataset_id)
 
     @torch.no_grad()
     def evaluate(self, pos_train_pred=None):
@@ -174,7 +174,7 @@ class Evaluation:
         self.model.eval()
         self.predictor.eval()
 
-        h = self.model(self.data.x, self.data.adj_t)
+        h = self.model(self.data)
 
         pos_valid_edge = self.data_edge_dict['valid']['edge'].to(h.device)
         neg_valid_edge = self.data_edge_dict['valid']['edge_neg'].to(h.device)
@@ -194,7 +194,10 @@ class Evaluation:
         neg_valid_pred = torch.cat(neg_valid_preds, dim=0)
 
         if self.dataset_id == "ogbl-collab":
-            h = self.model(self.data.x, self.data.full_adj_t)
+            adj_saved = self.data.adj_t
+            self.data.adj_t = self.data.full_adj_t
+            h = self.model(self.data)
+            self.data.adj_t = adj_saved
 
         pos_test_preds = []
         for perm in self.test_pos_dataloader:
@@ -210,19 +213,19 @@ class Evaluation:
 
         results = {}
         for K in [10, 20, 30, 50, 100]:
-            self._evaulator.K = K
+            self._evaluator.K = K
             # dummy train, using valid
-            train_hits = self._evaulator.eval({
+            train_hits = self._evaluator.eval({
                 'y_pred_pos': pos_train_pred,
                 'y_pred_neg': neg_valid_pred,
             })[f'hits@{K}']
             results[f"[Train] Hits@{K}"] = train_hits
-            valid_hits = self._evaulator.eval({
+            valid_hits = self._evaluator.eval({
                 'y_pred_pos': pos_valid_pred,
                 'y_pred_neg': neg_valid_pred,
             })[f'hits@{K}']
             results[f"[Valid] Hits@{K}"] = valid_hits
-            test_hits = self._evaulator.eval({
+            test_hits = self._evaluator.eval({
                 'y_pred_pos': pos_test_pred,
                 'y_pred_neg': neg_test_pred,
             })[f'hits@{K}']

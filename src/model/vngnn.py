@@ -192,12 +192,13 @@ class VNGNN(torch.nn.Module):
         for conv in self.convs:
             conv.reset_parameters()
 
-    def forward(self, x, adj_t):
+    def forward(self, data):
         """
         x:              [# of nodes, # of features]
         adj_t:          [# of nodes, # of nodes]
         virtual_node:   [# of virtual nodes, # of features]
         """
+        x, adj_t = data.x, data.adj_t
         # initialize virtual node to zero
         if self.num_virtual_nodes == 0:
             virtual_node = torch.zeros(1).to(x.device)
