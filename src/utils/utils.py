@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import *
 from ogb.linkproppred import PygLinkPropPredDataset, LinkPropPredDataset
 from torch_sparse import SparseTensor
+from torch_geometric.utils import to_undirected
 import torch_geometric.transforms as T
 import pandas as pd
 
@@ -135,9 +136,9 @@ def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
         data.edge_index = edge_index # for graclus
         if args.use_valedges_as_input:
             val_edge_index = data_edge_dict["valid"]["edge"].t()
-            full_edge_index = torch.cat([edge_index, val_edge_index], dim=-1)
-            data.full_adj_t = SparseTensor.from_edge_index(full_edge_index).t()
-            data.full_adj_t = data.full_adj_t.to_symmetric()
+            data.full_edge_index = to_undirected(torch.cat([edge_index, val_edge_index], dim=-1))
+            data.full_adj_t = SparseTensor.from_edge_index(data.full_edge_index).t()
+            # data.full_adj_t = data.full_adj_t.to_symmetric()
         else:
             data.full_adj_t = data.adj_t
 

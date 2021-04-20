@@ -199,9 +199,12 @@ class Evaluation:
         neg_valid_pred = torch.cat(neg_valid_preds, dim=0)
 
         if self.dataset_id == "ogbl-collab":
+            ei_saved = self.data.edge_index
             adj_saved = self.data.adj_t
+            self.data.edge_index = self.data.full_edge_index
             self.data.adj_t = self.data.full_adj_t
             h = self.model(self.data)
+            self.data.edge_index = ei_saved
             self.data.adj_t = adj_saved
 
         pos_test_preds = []
