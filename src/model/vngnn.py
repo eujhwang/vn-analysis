@@ -202,7 +202,7 @@ class VNGNN(torch.nn.Module):
         """
         x, adj_t = data.x, data.adj_t
         adj = data.adj if hasattr(data, "adj") else data.adj_t.t()
-        
+
         # initialize virtual node to zero
         if self.num_virtual_nodes == 0:
             virtual_node = torch.zeros(1).to(x.device)
