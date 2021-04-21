@@ -140,6 +140,7 @@ def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
             data.full_adj_t = SparseTensor.from_edge_index(data.full_edge_index).t()
             # data.full_adj_t = data.full_adj_t.to_symmetric()
         else:
+            data.full_edge_index = data.edge_index
             data.full_adj_t = data.adj_t
 
     elif dataset_id == "ogbl-biokg":  # TODO add gdc later if needed
