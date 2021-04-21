@@ -87,6 +87,7 @@ def set_seed(seed: int):
 
 def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
 
+    args.epoch_transform = None
     if args.model.endswith("gdc"):
         # need to do this in between because it changes the edge_index which
         # we change using trainidx... and use to create adj_t in the sparse transform
@@ -101,6 +102,7 @@ def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
     elif args.model == "pgnn":
         # precompute anchors, distances
         transform = PGNN_Transform(args.layers, args.anchors, args.approximate)
+        args.epoch_transform = transform  # need to call this during training too
     elif args.model == "123gnn":
         # this just adds attributes to data based on edge_index
         transform = T.Compose([TwoMalkin(), ConnectedThreeMalkin()])

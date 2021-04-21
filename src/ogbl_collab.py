@@ -65,6 +65,7 @@ def setup(args):
         dataset_id=dataset_id,
         data=data,
         data_edge_dict=data_edge_dict,
+        epoch_transform=args.epoch_transform,
         model=model,
         model_type=args.model,
         predictor=predictor,
