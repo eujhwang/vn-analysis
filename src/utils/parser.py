@@ -95,11 +95,6 @@ def kg_parse_args():
 
     parser.add_argument('--learning_rate', default=0.0001, type=float)
     parser.add_argument('--save_path', default=None, type=str)
-    parser.add_argument('--print_on_screen', action='store_true', help='log on screen or not')
-    parser.add_argument('--ntriples_eval_train', type=int, default=200000,
-                        help='number of training triples to evaluate eventually')
-    parser.add_argument('--neg_size_eval_train', type=int, default=500,
-                        help='number of negative samples when evaluating training triples')
     parser.add_argument('--patience', default=50, type=int)
     parser.add_argument('--eval_steps', default=1000, type=int)
 

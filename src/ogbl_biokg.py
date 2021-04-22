@@ -177,9 +177,10 @@ def setup(args):
 def main():
     args = kg_parse_args()
     set_seed(args.seed)
-    wandb.init(project="ogb-revisited", entity="hwang7520")
+    wandb.init()
     wandb.config.update(args, allow_val_change=True)
     args = wandb.config
+    print(args)
     trainer = setup(args)
     trainer.train()
 
