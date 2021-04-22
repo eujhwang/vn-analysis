@@ -33,7 +33,7 @@ def register_default_args(parser, ident):
     parser.add_argument('--alpha', type=float, default=0.5)
     parser.add_argument('--approximate', dest='approximate', default=-1, type=int,
                         help='PGNN: k-hop shortest path distance. -1 means exact shortest path')  # -1, 2
-    parser.add_argument('--anchors', type=int, default=10)  # PGNN
+    parser.add_argument('--anchors', type=int, default=64)  # PGNN
 
 
     parser.add_argument('--layers', type=int, default=2)
