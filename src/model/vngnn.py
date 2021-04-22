@@ -221,7 +221,7 @@ class VNGNN(torch.nn.Module):
             # vn_index.T.nonzero(): [# of nodes * vns_conn, 2]; [:, 0]: graph node index [:, 1]: virtual node index
             vn_indices = torch.nonzero(self.vn_index.T)
             # select corresponding virtual node vector using vn_indices[:, 1]
-            selected_vns = torch.index_select(virtual_node, 0, vn_indices[:, 1].to(torch.long))
+            selected_vns = torch.index_select(virtual_node, 0, vn_indices[:, 1].to(torch.long)).to(data.device)
 
             # scatter_[op]
             # [op] all values from the input at the indices specified in the index tensor along a given axis dim.
