@@ -125,7 +125,7 @@ def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
 
         data.x = data.x.to(torch.float)
         data = transform(data)
-        data = ToSparseTensor()(data, data.x.shape[0])
+        data = ToSparseTensor(remove_edge_index=False)(data, data.x.shape[0])
     elif dataset_id == "ogbl-collab":
         dataset = PygLinkPropPredDataset(name='ogbl-collab')
         data = dataset[0]
