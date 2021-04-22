@@ -1,6 +1,7 @@
 from typing import Optional
 import torch
 import torch.nn.functional as F
+import torch_scatter
 from torch.nn import Sequential, Linear, ReLU, Conv2d, BatchNorm1d, LeakyReLU, Softplus, ELU
 from torch_geometric.nn import GCNConv, SAGEConv, GINConv, global_mean_pool, global_add_pool, global_max_pool, \
     GlobalAttention
@@ -216,17 +217,20 @@ class VNGNN(torch.nn.Module):
 
         embs = [x]
         for layer in range(self.num_layers):
+            # vn_index: [# of vns, # of nodes], vn_index.T: [# of nodes, # of vns]
+            # vn_index.T.nonzero(): [# of nodes * vns_conn, 2]; [:, 0]: graph node index [:, 1]: virtual node index
+            vn_indices = torch.nonzero(self.vn_index.T)
+            # select corresponding virtual nodes using vn_indices[:, 1]
+            index_select = torch.index_select(virtual_node, 0, vn_indices[:, 1].to(torch.long))
 
-            node_embds = []
-            for n in range(self.num_nodes):
-                if self.aggregation == "sum":
-                    emb = embs[layer][n] + virtual_node[self.vn_index.T[n]].sum(dim=0, keepdim=True)  # add message from virtual node
-                elif self.aggregation == "mean":
-                    emb = embs[layer][n] + virtual_node[self.vn_index.T[n]].mean(dim=0, keepdim=True)
-                elif self.aggregation == "max":
-                    emb = embs[layer][n] + torch.max(virtual_node[self.vn_index.T[n]], dim=0, keepdim=True).values
-                node_embds.append(emb)
-            new_x = torch.cat(node_embds, dim=0)
+            # scatter_[op]
+            # [op] all values from the input at the indices specified in the index tensor along a given axis dim.
+            if self.aggregation == "sum":
+                new_x = embs[layer] + torch_scatter.scatter_add(index_select, vn_indices[:, 0].to(torch.long), dim=0)
+            elif self.aggregation == "mean":
+                new_x = embs[layer] + torch_scatter.scatter_mean(index_select, vn_indices[:, 0].to(torch.long), dim=0)
+            elif self.aggregation == "max":
+                new_x = embs[layer] + torch_scatter.scatter_max(index_select, vn_indices[:, 0].to(torch.long), dim=0)[0]
             new_x = self.convs[layer](new_x, adj_t)  # GCN layer
             new_x = self.batch_norms[layer](new_x)
             new_x = F.relu(new_x)
