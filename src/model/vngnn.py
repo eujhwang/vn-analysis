@@ -216,14 +216,17 @@ class VNGNN(torch.nn.Module):
 
         embs = [x]
         for layer in range(self.num_layers):
-            if self.aggregation == "sum":
-                aggregated_virtual_node = virtual_node.sum(dim=0, keepdim=True)
-            elif self.aggregation == "mean":
-                aggregated_virtual_node = virtual_node.mean(dim=0, keepdim=True)
-            elif self.aggregation == "max":
-                aggregated_virtual_node = torch.max(virtual_node, dim=0, keepdim=True).values
 
-            new_x = embs[layer] + aggregated_virtual_node  # add message from virtual node
+            node_embds = []
+            for n in range(self.num_nodes):
+                if self.aggregation == "sum":
+                    emb = embs[layer][n] + virtual_node[self.vn_index.T[n]].sum(dim=0, keepdim=True)  # add message from virtual node
+                elif self.aggregation == "mean":
+                    emb = embs[layer][n] + virtual_node[self.vn_index.T[n]].mean(dim=0, keepdim=True)
+                elif self.aggregation == "max":
+                    emb = embs[layer][n] + torch.max(virtual_node[self.vn_index.T[n]], dim=0, keepdim=True).values
+                node_embds.append(emb)
+            new_x = torch.cat(node_embds, dim=0)
             new_x = self.convs[layer](new_x, adj_t)  # GCN layer
             new_x = self.batch_norms[layer](new_x)
             new_x = F.relu(new_x)
