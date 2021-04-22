@@ -101,6 +101,6 @@ def kg_parse_args():
     parser.add_argument('--neg_size_eval_train', type=int, default=500,
                         help='number of negative samples when evaluating training triples')
     parser.add_argument('--patience', default=50, type=int)
-    parser.add_argument('--eval_steps', default=5, type=int)
+    parser.add_argument('--eval_steps', default=1000, type=int)
 
     return parser.parse_args()

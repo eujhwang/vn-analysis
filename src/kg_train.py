@@ -129,10 +129,10 @@ class Evaluation:
         print("Evaluation start...")
         eval_start_time = time.time()
         valid_metrics = self.model.test_step(self.model, self.valid_dataset_list, self.device)
-        test_metrics = self.model.test_step(self.model, self.test_dataset_list, self.device)
-
         print("valid_metrics", valid_metrics)
+        test_metrics = self.model.test_step(self.model, self.test_dataset_list, self.device)
         print("test_metrics", test_metrics)
+
         wandb.log({
             "[Valid] Hits@1": valid_metrics["hits@1_list"],
             "[Valid] Hits@3": valid_metrics["hits@3_list"],

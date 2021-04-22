@@ -278,7 +278,7 @@ class KGEModel(nn.Module):
         results = defaultdict(list)
         model.eval()
         with torch.no_grad():
-            for test_dataset in test_dataset_list:
+            for test_dataset in tqdm(test_dataset_list):
                 for positive_sample, negative_sample, mode in test_dataset:
                     positive_sample = positive_sample.to(device)
                     negative_sample = negative_sample.to(device)
