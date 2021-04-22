@@ -140,10 +140,10 @@ class Evaluation:
             "[Valid] MRR": valid_metrics["mrr_list"],
         }, commit=False)
         wandb.log({
-            "[Test] Hits@1": valid_metrics["hits@1_list"],
-            "[Test] Hits@3": valid_metrics["hits@3_list"],
-            "[Test] Hits@10": valid_metrics["hits@10_list"],
-            "[Test] MRR": valid_metrics["mrr_list"],
+            "[Test] Hits@1": test_metrics["hits@1_list"],
+            "[Test] Hits@3": test_metrics["hits@3_list"],
+            "[Test] Hits@10": test_metrics["hits@10_list"],
+            "[Test] MRR": test_metrics["mrr_list"],
         }, commit=False)
         wandb.log({
             "[Eval] Elapsed Time": time.time() - eval_start_time,
