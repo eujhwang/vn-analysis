@@ -36,7 +36,7 @@ def setup(args):
     device = cuda_if_available(args.device)
     dataset_id = "ogbl-ddi"
     data_dir = Path(args.data_dir).expanduser()
-    data, data_edge_dict = create_dataset(args, dataset_id, data_dir)
+    data, data_edge_dict, epoch_transform = create_dataset(args, dataset_id, data_dir)
 
     data = data.to(device)
 
@@ -67,7 +67,7 @@ def setup(args):
         dataset_id=dataset_id,
         data=data,
         data_edge_dict=data_edge_dict,
-        epoch_transform=args.epoch_transform,
+        epoch_transform=epoch_transform,
         model=model,
         model_type=args.model,
         predictor=predictor,

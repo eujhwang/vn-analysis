@@ -134,7 +134,7 @@ def setup(args):
     # # Write logs to checkpoint and console
     # set_logger(args)
 
-    data, data_edge_dict = create_dataset(args, dataset_id, data_dir)
+    data, data_edge_dict, epoch_transform = create_dataset(args, dataset_id, data_dir)
     train_iterator, valid_dataset_list, test_dataset_list, valid_triples, test_triples, entity_dict, nentity, nrelation = create_dataloader(args, data, data_edge_dict)
 
     evaluator = Evaluator(name=args.dataset)

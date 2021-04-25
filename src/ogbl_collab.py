@@ -35,7 +35,7 @@ def setup(args):
     device = cuda_if_available(args.device)
     dataset_id = "ogbl-collab"
     data_dir = Path(args.data_dir).expanduser()
-    data, data_edge_dict = create_dataset(args, dataset_id, data_dir)
+    data, data_edge_dict, epoch_transform = create_dataset(args, dataset_id, data_dir)
     data = data.to(device)
 
     train_dataloader, valid_pos_dataloader, valid_neg_dataloader, test_pos_dataloader, test_neg_dataloader = create_dataloader(data_edge_dict, args.log_batch_size)
@@ -65,7 +65,7 @@ def setup(args):
         dataset_id=dataset_id,
         data=data,
         data_edge_dict=data_edge_dict,
-        epoch_transform=args.epoch_transform,
+        epoch_transform=epoch_transform,
         model=model,
         model_type=args.model,
         predictor=predictor,
