@@ -49,7 +49,6 @@ def setup(args):
     wandb.watch(model)
 
     optimizer = torch.optim.Adam(list(model.parameters()) + list(predictor.parameters()), lr=args.lr)
-    early_stopping = EarlyStopping("Accuracy", patience=args.patience)
 
     evaluation = Evaluation(
         dataset_id=dataset_id,
@@ -74,11 +73,11 @@ def setup(args):
         train_dataloader=train_dataloader,
         optimizer=optimizer,
         evaluation=evaluation,
-        early_stopping=early_stopping,
         epochs=args.epochs,
         eval_steps=args.eval_steps,
         device=device,
         wandb_id=wandb.run.id,
+        patience=args.patience,
     )
 
     return trainer
@@ -86,12 +85,12 @@ def setup(args):
 
 def main():
     args = build_args("ppa")
-    print("args:", args)
     assert args.model  # must not be empty for node property prediction
     set_seed(args.seed)
     wandb.init()
     wandb.config.update(args, allow_val_change=True)
     args = wandb.config
+    print("args:", args)
     trainer = setup(args)
     trainer.train()
 

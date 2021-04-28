@@ -31,9 +31,9 @@ class Trainer:
         epochs:int,
         eval_steps:int,
         evaluation: Evaluation,
-        early_stopping: Module,
         device: torch.device,
         wandb_id: str,
+        patience: int,
     ):
 
         self.dataset_id = dataset_id
@@ -47,11 +47,11 @@ class Trainer:
         self.opt = optimizer
         self.epochs = epochs
         self.eval_steps = eval_steps
-        self.early_stopping = early_stopping
         self.evaluation = evaluation
         self.best_score = 0.0
         self.device = device
         self.best_epoch = -1
+        self.patience = patience
 
         timestamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d%H%M%S')
         self.model_save_dir = "./saved_model/"
@@ -137,7 +137,9 @@ class Trainer:
                     metrics["[Valid] Best Hits@20"] = self.best_score
                 print("metrics", metrics)
                 wandb.log(metrics, commit=False)
-                self.early_stopping(self.best_score)
+                if (epoch - self.best_epoch) >= self.patience:
+                    print(f"\nAccuracy has not changed in {self.patience} steps! Stopping the run after final evaluation...")
+                    break
             wandb.log({})
 
         metrics = self.evaluation.evaluate(pos_train_pred)
