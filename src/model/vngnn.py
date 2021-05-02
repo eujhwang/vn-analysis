@@ -98,7 +98,7 @@ def iterative_graclus(num_cl, edge_index):
                 c += 1
             elif i == c:
                 c += 1
-    with open('cluster.pickle', 'wb') as handle:
+    with open('graclus_cluster.pickle', 'wb') as handle:
         pickle.dump(n2cl, handle, protocol=pickle.HIGHEST_PROTOCOL)
     return n2cl
 
