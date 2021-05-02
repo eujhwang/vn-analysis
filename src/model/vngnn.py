@@ -1,3 +1,4 @@
+import pickle
 from typing import Optional
 import torch
 import torch.nn.functional as F
@@ -6,6 +7,8 @@ from torch.nn import Sequential, Linear, ReLU, Conv2d, BatchNorm1d, LeakyReLU, S
 from torch_geometric.nn import GCNConv, SAGEConv, GINConv, global_mean_pool, global_add_pool, global_max_pool, \
     GlobalAttention
 from torch_cluster import graclus_cluster
+from tqdm import tqdm
+
 from model.diff_pool_iterative import iterative_diff_pool
 
 def get_conv_layer(name, in_channels, hidden_channels, out_channels, gcn_normalize, gcn_cached):
@@ -95,7 +98,8 @@ def iterative_graclus(num_cl, edge_index):
                 c += 1
             elif i == c:
                 c += 1
-    # print(n2cl.tolist())
+    with open('cluster.pickle', 'wb') as handle:
+        pickle.dump(n2cl, handle, protocol=pickle.HIGHEST_PROTOCOL)
     return n2cl
 
 
