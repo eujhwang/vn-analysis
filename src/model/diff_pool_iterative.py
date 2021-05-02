@@ -1,4 +1,5 @@
 import os.path as osp
+import pickle
 from math import ceil
 
 import torch
@@ -84,6 +85,8 @@ def iterative_diff_pool(num_clusters, numcl_p_n, x, adj, mask=None):
     s2 = torch.softmax(s2, dim=-1)
 
     n2cl = torch.mm(s1.squeeze(0), s2.squeeze(0))
+    with open('diffpool_cluster.pickle', 'wb') as handle:
+        pickle.dump(n2cl, handle, protocol=pickle.HIGHEST_PROTOCOL)
     topk, indices = torch.topk(n2cl, numcl_p_n, dim=-1, largest=True, sorted=True)
 
     idx = torch.zeros(num_clusters, x.shape[-2])
