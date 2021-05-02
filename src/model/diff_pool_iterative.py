@@ -64,7 +64,7 @@ def iterative_diff_pool(num_clusters, numcl_p_n, x, adj, mask=None):
     gnn1_embed = GNN(num_features, 64, 64, lin=False).to(x.device)
 
     num_nodes = num_clusters
-    gnn2_pool = GNN(3 * 64, 64, num_nodes)
+    gnn2_pool = GNN(3 * 64, 64, num_nodes).to(x.device)
     # gnn2_embed = GNN(3 * 64, 64, 64, lin=False)
 
     # gnn3_embed = GNN(3 * 64, 64, 64, lin=False)
@@ -85,7 +85,7 @@ def iterative_diff_pool(num_clusters, numcl_p_n, x, adj, mask=None):
     s2 = torch.softmax(s2, dim=-1)
 
     n2cl = torch.mm(s1.squeeze(0), s2.squeeze(0))
-    with open('diffpool_cluster.pickle', 'wb') as handle:
+    with open('diffpool_cluster_'+str(num_features)+'.pickle', 'wb') as handle:
         pickle.dump(n2cl, handle, protocol=pickle.HIGHEST_PROTOCOL)
     topk, indices = torch.topk(n2cl, numcl_p_n, dim=-1, largest=True, sorted=True)
 
