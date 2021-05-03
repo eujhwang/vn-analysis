@@ -1,7 +1,10 @@
 import logging
 import os
 import random
+import time
 import warnings
+from datetime import datetime
+
 import torch
 from pathlib import Path
 from typing import *
@@ -189,36 +192,19 @@ def set_logger(args):
         logging.getLogger('').addHandler(console)
 
 
-class EarlyStoppingException(Exception):
-    """Max Value Exceeded"""
+def set_logger(dataset_id: str, wandb_id: str):
+    timestamp = datetime.fromtimestamp(time.time()).strftime('%Y%m%d%H%M')
+    log_dir = "./log/"
+    Path(log_dir).mkdir(parents=True, exist_ok=True)
+    logging_path = log_dir + f"{dataset_id}_{timestamp}_{wandb_id.split('/')[-1]}.log"
 
-    def __init__(self, condition: str):
-        self.condition = condition
-
-    def __str__(self):
-        return f"EarlyStopping: {self.condition}"
-
-
-class EarlyStopping:
-    """
-    Stop looping if a value is stagnant.
-    name: str = "EarlyStopping value"
-    patience: int = 10
-    """
-    def __init__(self, name: str, patience: int):
-        self.name = name
-        self.patience = patience
-        self.count = 0
-        self.value = 0
-
-    def __call__(self, value):
-        if value == self.value:
-            self.count += 1
-            if self.count >= self.patience:
-                raise EarlyStoppingException(
-                    f"{self.name} has not changed in {self.patience} steps."
-                )
-        else:
-            self.value = value
-            self.count = 0
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        handlers=[
+            logging.FileHandler(logging_path),
+            logging.StreamHandler()
+        ]
+    )
+    logging.info("log file is saved at: %s" % os.path.abspath(logging_path))
 

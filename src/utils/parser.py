@@ -67,6 +67,10 @@ def register_default_args(parser, ident):
     parser.add_argument('--gcn_normalize', type=int, default=1, help="0: false, 1: true")
     parser.add_argument('--gcn_cached', type=int, default=0, help="0: false, 1: true")
 
+    parser.add_argument('--cross_valid', action='store_true')
+    parser.add_argument('--wandb_id', type=str, default="", help="wandb run path")
+    parser.add_argument('--runs', type=int, default=5, help="# of cross validation")
+
 def kg_parse_args():
     parser = argparse.ArgumentParser(
         description='Training and Testing Knowledge Graph Embedding Models',

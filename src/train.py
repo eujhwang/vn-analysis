@@ -48,7 +48,8 @@ class Trainer:
         self.epochs = epochs
         self.eval_steps = eval_steps
         self.evaluation = evaluation
-        self.best_score = 0.0
+        self.best_valid_score = -1.0
+        self.best_test_score = 0.0
         self.device = device
         self.best_epoch = -1
         self.patience = patience
@@ -58,13 +59,14 @@ class Trainer:
         Path(self.model_save_dir).mkdir(parents=True, exist_ok=True)
         self.model_save_path = self.model_save_dir + f"{dataset_id}_{timestamp}_{wandb_id}.pt"
 
-    def update_save_best_score(self, score: float, epoch: int):
-        if self.best_score < score:
-            self.best_score = score
+    def update_save_best_score(self, valid_score: float, test_score: float, epoch: int):
+        if self.best_valid_score < valid_score:
+            self.best_valid_score = valid_score
+            self.best_test_score = test_score
             self.best_epoch = epoch
             torch.save(self.model.state_dict(), self.model_save_path)
-            print("model is saved here: %s, best epoch: %s, best f1 score: %f"
-                  % (self.model_save_path, self.best_epoch, self.best_score))
+            print("model is saved here: %s, best epoch: %s, best valid f1 score: %f, best test f1 score: %f"
+                  % (self.model_save_path, self.best_epoch, self.best_valid_score, self.best_test_score))
 
     def train(self):
         print("Training start..")
@@ -127,14 +129,17 @@ class Trainer:
                 metrics = self.evaluation.evaluate(pos_train_pred)
 
                 if self.dataset_id == "ogbl-ppa":
-                    self.update_save_best_score(metrics["[Valid] Hits@100"], epoch)
-                    metrics["[Valid] Best Hits@100"] = self.best_score
+                    self.update_save_best_score(metrics["[Valid] Hits@100"], metrics["[Test] Hits@100"], epoch)
+                    metrics["[Valid] Best Hits@100"] = self.best_valid_score
+                    metrics["[Test] Best Hits@100"] = self.best_test_score
                 elif self.dataset_id == "ogbl-collab":
-                    self.update_save_best_score(metrics["[Valid] Hits@50"], epoch)
-                    metrics["[Valid] Best Hits@50"] = self.best_score
+                    self.update_save_best_score(metrics["[Valid] Hits@50"], metrics["[Test] Hits@50"], epoch)
+                    metrics["[Valid] Best Hits@50"] = self.best_valid_score
+                    metrics["[Test] Best Hits@50"] = self.best_test_score
                 elif self.dataset_id == "ogbl-ddi":
-                    self.update_save_best_score(metrics["[Valid] Hits@20"], epoch)
-                    metrics["[Valid] Best Hits@20"] = self.best_score
+                    self.update_save_best_score(metrics["[Valid] Hits@20"], metrics["[Test] Hits@20"], epoch)
+                    metrics["[Valid] Best Hits@20"] = self.best_valid_score
+                    metrics["[Test] Best Hits@20"] = self.best_test_score
                 print("metrics", metrics)
                 wandb.log(metrics, commit=False)
                 if (epoch - self.best_epoch) >= self.patience:
@@ -147,6 +152,8 @@ class Trainer:
         wandb.log(metrics, commit=False)
         wandb.log({})
         print("done!")
+
+        return {"best_valid": self.best_valid_score, "best_test": self.best_test_score, "best_epoch": self.best_epoch}
 
 
 class Evaluation:
