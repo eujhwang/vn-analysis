@@ -99,25 +99,25 @@ def main():
         wandb.config.update(run.config, allow_val_change=True)
         args = wandb.config
 
-        logger.info(f"args: {args}")
+        logger.warning(f"args: {args}")
         best_valid_scores, best_test_scores = [], []
         seed = args.seed  # initial seed
 
         for i in range(cross_fold_num):
-            logger.info("run: %d, seed: %d" % (i, seed))
+            logger.warning("run: %d, seed: %d" % (i, seed))
             set_seed(seed)
             trainer = setup(args)
             best_metrics = trainer.train()
             seed = random.randint(0, 2 ** 32)
             best_valid_scores.append(best_metrics["best_valid"])
             best_test_scores.append(best_metrics["best_test"])
-            logger.info("best_valid_score: %f, test_score: %f, best_epoch: %d"
+            logger.warning("best_valid_score: %f, test_score: %f, best_epoch: %d"
                         % (best_metrics["best_valid"], best_metrics["best_test"], best_metrics["best_epoch"]))
 
         best_valid_score_tensor = torch.tensor(best_valid_scores)
         best_test_score_tensor = torch.tensor(best_test_scores)
-        logger.info(f"Best Valid: {best_valid_score_tensor.mean():.2f} ± {best_valid_score_tensor.std():.2f}")
-        logger.info(f"Final Test: {best_test_score_tensor.mean():.2f} ± {best_test_score_tensor.std():.2f}")
+        logger.warning(f"Best Valid: {best_valid_score_tensor.mean():.2f} ± {best_valid_score_tensor.std():.2f}")
+        logger.warning(f"Final Test: {best_test_score_tensor.mean():.2f} ± {best_test_score_tensor.std():.2f}")
     else:
         wandb.init()
         wandb.config.update(args, allow_val_change=True)
