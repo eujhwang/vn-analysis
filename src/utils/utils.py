@@ -198,6 +198,10 @@ def set_logger(dataset_id: str, wandb_id: str):
     Path(log_dir).mkdir(parents=True, exist_ok=True)
     logging_path = log_dir + f"{dataset_id}_{timestamp}_{wandb_id.split('/')[-1]}.log"
 
+    # Remove all handlers associated with the root logger object.
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+
     logging.basicConfig(
         level=logging.DEBUG,
         format="%(asctime)s [%(levelname)s] %(message)s",

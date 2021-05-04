@@ -14,24 +14,6 @@ import functools
 print = functools.partial(print, flush=True)
 
 
-def init_logger(dataset_id, wandb_id):
-    timestamp = datetime.fromtimestamp(time.time()).strftime('%Y%m%d%H%M')
-    log_dir = "./log/"
-    Path(log_dir).mkdir(parents=True, exist_ok=True)
-    logging_path = log_dir + f"{dataset_id}_{timestamp}_{wandb_id.split('/')[-1]}.log"
-
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(asctime)s [%(levelname)s] %(message)s",
-        handlers=[
-            logging.FileHandler(logging_path),
-            logging.StreamHandler()
-        ]
-    )
-
-    logging.info("log file is saved at: %s" % os.path.abspath(logging_path))
-
-
 def create_dataloader(data_edge_dict: Dict[str, Tensor], log_batch_size: int):
     pos_train_edge = data_edge_dict["train"]["edge"]
     train_dataloader = DataLoader(range(pos_train_edge.size(0)), 2 ** log_batch_size, shuffle=True)
@@ -107,8 +89,7 @@ def main():
 
     if args.cross_valid:
         assert args.wandb_id != ""
-        init_logger("ogbl-ddi", args.wandb_id)
-        logger = logging.getLogger(__name__)
+        logger = set_logger("ogbl-ppa", args.wandb_id)
 
         api = wandb.Api()
         run = api.run(args.wandb_id)
