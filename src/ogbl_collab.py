@@ -86,8 +86,7 @@ def main():
     assert args.model  # must not be empty for node property prediction
     if args.cross_valid:
         assert args.wandb_id != ""
-        set_logger("ogbl-collab", args.wandb_id)
-        logger = logging.getLogger()
+        logger = set_logger("ogbl-collab", args.wandb_id)
 
         api = wandb.Api()
         run = api.run(args.wandb_id)

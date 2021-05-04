@@ -199,12 +199,15 @@ def set_logger(dataset_id: str, wandb_id: str):
     logging_path = log_dir + f"{dataset_id}_{timestamp}_{wandb_id.split('/')[-1]}.log"
 
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.DEBUG,
         format="%(asctime)s [%(levelname)s] %(message)s",
         handlers=[
             logging.FileHandler(logging_path),
             logging.StreamHandler()
         ]
     )
-    logging.info("log file is saved at: %s" % os.path.abspath(logging_path))
+
+    logger = logging.getLogger(__name__)
+    logger.info("log file is saved at: %s" % os.path.abspath(logging_path))
+    return logger
 
