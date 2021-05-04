@@ -203,7 +203,7 @@ def set_logger(dataset_id: str, wandb_id: str):
         logging.root.removeHandler(handler)
 
     logging.basicConfig(
-        level=logging.DEBUG,
+        level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
         handlers=[
             logging.FileHandler(logging_path),
