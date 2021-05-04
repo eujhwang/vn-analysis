@@ -66,6 +66,7 @@ def register_default_args(parser, ident):
 
     parser.add_argument('--gcn_normalize', type=int, default=1, help="0: false, 1: true")
     parser.add_argument('--gcn_cached', type=int, default=0, help="0: false, 1: true")
+    parser.add_argument('--use_only_last', type=int, default=0, help="0: false, 1: true")
 
     parser.add_argument('--cross_valid', action='store_true')
     parser.add_argument('--wandb_id', type=str, default="", help="wandb run path")

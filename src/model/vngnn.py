@@ -133,7 +133,8 @@ def get_vn_index(name, num_ns, num_vns, num_vns_conn, edge_index):
 class VNGNN(torch.nn.Module):
     def __init__(self, in_channels, hidden_channels, out_channels, num_layers, dropout, num_nodes, edge_index,
                  model, num_vns=1, num_vns_conn=1, vn_idx="full",  # maybe choose a better name for this parameter...
-                 aggregation="sum", graph_pool="sum", activation="relu", JK="last", gcn_normalize=True, gcn_cached=False):
+                 aggregation="sum", graph_pool="sum", activation="relu", JK="last", gcn_normalize=True, gcn_cached=False,
+                 use_only_last=False):
         super().__init__()
         self.num_layers = num_layers
         self.convs = torch.nn.ModuleList()
@@ -194,6 +195,7 @@ class VNGNN(torch.nn.Module):
         self.aggregation = aggregation
         self.JK = JK
         self.dropout = dropout
+        self.use_only_last = use_only_last
 
     def reset_parameters(self):
         for conv in self.convs:
@@ -242,27 +244,50 @@ class VNGNN(torch.nn.Module):
 
             embs.append(new_x)
             # update virtual node
-            if layer < self.num_layers - 1 and self.num_virtual_nodes > 0:
-                # create a node that contains all graph nodes information
-                # global_add_pool: [1, # of features]
-                # virtual_node_tmp: [# of virtual nodes, # of features], virtual_node: [# of virtual nodes, # of features]
-                # embs[layer]: [# of nodes, # of features] -> [# of nodes, hid_dim] -> [# of nodes, hid_dim]
-                virtual_node_tmp_list = []
-                for v in range(self.num_virtual_nodes):
-                    # [1, # of features] -> [1, hid_dim]
-                    # select only related nodes using vn_index == 1
-                    virtual_node_tmp = self.graph_pooling_layer(embs[layer][self.vn_index[v]],
-                                                       torch.zeros(1, dtype=torch.int64, device=x.device))
-                    virtual_node_tmp_list.append(virtual_node_tmp)
-                virtual_node_tmp = torch.cat(virtual_node_tmp_list, dim=0) + virtual_node
+            if self.use_only_last:
+                if layer == self.num_layers - 2 and self.num_virtual_nodes > 0:
+                    # create a node that contains all graph nodes information
+                    # global_add_pool: [1, # of features]
+                    # virtual_node_tmp: [# of virtual nodes, # of features], virtual_node: [# of virtual nodes, # of features]
+                    # embs[layer]: [# of nodes, # of features] -> [# of nodes, hid_dim] -> [# of nodes, hid_dim]
+                    virtual_node_tmp_list = []
+                    for v in range(self.num_virtual_nodes):
+                        # [1, # of features] -> [1, hid_dim]
+                        # select only related nodes using vn_index == 1
+                        virtual_node_tmp = self.graph_pooling_layer(embs[layer][self.vn_index[v]],
+                                                                    torch.zeros(1, dtype=torch.int64, device=x.device))
+                        virtual_node_tmp_list.append(virtual_node_tmp)
+                    virtual_node_tmp = torch.cat(virtual_node_tmp_list, dim=0) + virtual_node
 
-                # mlp layer for each virtual node
-                virtual_node_list = []
-                for v in range(self.num_virtual_nodes):
-                    virtual_node_mlp = self.virtual_node_mlp[v + layer * self.num_virtual_nodes](
-                        virtual_node_tmp[v].unsqueeze(0))
-                    virtual_node_list.append(virtual_node_mlp)
-                virtual_node = F.dropout(torch.cat(virtual_node_list, dim=0), self.dropout, training=self.training)
+                    # mlp layer for each virtual node
+                    virtual_node_list = []
+                    for v in range(self.num_virtual_nodes):
+                        virtual_node_mlp = self.virtual_node_mlp[v + layer * self.num_virtual_nodes](
+                            virtual_node_tmp[v].unsqueeze(0))
+                        virtual_node_list.append(virtual_node_mlp)
+                    virtual_node = F.dropout(torch.cat(virtual_node_list, dim=0), self.dropout, training=self.training)
+            else:
+                if layer < self.num_layers - 1 and self.num_virtual_nodes > 0:
+                    # create a node that contains all graph nodes information
+                    # global_add_pool: [1, # of features]
+                    # virtual_node_tmp: [# of virtual nodes, # of features], virtual_node: [# of virtual nodes, # of features]
+                    # embs[layer]: [# of nodes, # of features] -> [# of nodes, hid_dim] -> [# of nodes, hid_dim]
+                    virtual_node_tmp_list = []
+                    for v in range(self.num_virtual_nodes):
+                        # [1, # of features] -> [1, hid_dim]
+                        # select only related nodes using vn_index == 1
+                        virtual_node_tmp = self.graph_pooling_layer(embs[layer][self.vn_index[v]],
+                                                           torch.zeros(1, dtype=torch.int64, device=x.device))
+                        virtual_node_tmp_list.append(virtual_node_tmp)
+                    virtual_node_tmp = torch.cat(virtual_node_tmp_list, dim=0) + virtual_node
+
+                    # mlp layer for each virtual node
+                    virtual_node_list = []
+                    for v in range(self.num_virtual_nodes):
+                        virtual_node_mlp = self.virtual_node_mlp[v + layer * self.num_virtual_nodes](
+                            virtual_node_tmp[v].unsqueeze(0))
+                        virtual_node_list.append(virtual_node_mlp)
+                    virtual_node = F.dropout(torch.cat(virtual_node_list, dim=0), self.dropout, training=self.training)
 
         if self.JK == "last" or self.num_layers <= 1:
             emb = embs[-1]
