@@ -6,6 +6,7 @@ import torch_scatter
 from torch.nn import Sequential, Linear, ReLU, Conv2d, BatchNorm1d, LeakyReLU, Softplus, ELU
 from torch_geometric.nn import GCNConv, SAGEConv, GINConv, global_mean_pool, global_add_pool, global_max_pool, \
     GlobalAttention
+from torch_geometric.data import ClusterData, Data
 from torch_cluster import graclus_cluster
 from tqdm import tqdm
 
@@ -124,6 +125,11 @@ def get_vn_index(name, num_ns, num_vns, num_vns_conn, edge_index):
         idx = torch.zeros(num_vns, num_ns)
         for i in range(num_vns):
             idx[i][n2cl == i] = 1
+    elif name == "metis":
+        clu = ClusterData(Data(edge_index=edge_index), num_parts=num_vns)
+        idx = torch.zeros(num_vns, num_ns)
+        for i in range(num_vns):
+            idx[i][clu.perm[clu.partptr[i]:clu.partptr[i+1]]] = 1
     else:
         raise ValueError(f"{name} is unsupported at this time!")
 
