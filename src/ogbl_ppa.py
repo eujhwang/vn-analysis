@@ -89,8 +89,7 @@ def main():
 
     if args.cross_valid:
         assert args.wandb_id != ""
-        set_logger("ogbl-ppa", args.wandb_id)
-        logger = logging.getLogger()
+        logger = set_logger("ogbl-ppa", args.wandb_id)
 
         api = wandb.Api()
         run = api.run(args.wandb_id)

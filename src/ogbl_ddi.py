@@ -14,7 +14,6 @@ from model.utils import init_model
 import functools
 print = functools.partial(print, flush=True)
 
-
 def create_dataloader(data_edge_dict: Dict[str, Tensor], log_batch_size: int):
     pos_train_edge = data_edge_dict["train"]["edge"]
     train_dataloader = DataLoader(range(pos_train_edge.size(0)), 2 ** log_batch_size, shuffle=True)
@@ -88,8 +87,7 @@ def main():
     assert args.model  # must not be empty for node property prediction
     if args.cross_valid:
         assert args.wandb_id != ""
-        set_logger("ogbl-ddi", args.wandb_id)
-        logger = logging.getLogger()
+        logger = set_logger("ogbl-ddi", args.wandb_id)
 
         api = wandb.Api()
         run = api.run(args.wandb_id)

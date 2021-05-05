@@ -198,6 +198,10 @@ def set_logger(dataset_id: str, wandb_id: str):
     Path(log_dir).mkdir(parents=True, exist_ok=True)
     logging_path = log_dir + f"{dataset_id}_{timestamp}_{wandb_id.split('/')[-1]}.log"
 
+    # Remove all handlers associated with the root logger object.
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
@@ -206,5 +210,8 @@ def set_logger(dataset_id: str, wandb_id: str):
             logging.StreamHandler()
         ]
     )
-    logging.info("log file is saved at: %s" % os.path.abspath(logging_path))
+
+    logger = logging.getLogger(__name__)
+    logger.info("log file is saved at: %s" % os.path.abspath(logging_path))
+    return logger
 
