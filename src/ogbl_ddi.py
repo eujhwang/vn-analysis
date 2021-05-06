@@ -99,14 +99,13 @@ def main():
 
         logger.info(f"args: {args}")
         best_valid_scores, best_test_scores = [], []
-        seed = args.seed  # initial seed
+        seed = random.randint(0, 2 ** 32)
 
         for i in range(cross_fold_num):
             logger.info("run: %d, seed: %d" % (i, seed))
             set_seed(seed)
             trainer = setup(args)
             best_metrics = trainer.train()
-            seed = random.randint(0, 2 ** 32)
             best_valid_scores.append(best_metrics["best_valid"])
             best_test_scores.append(best_metrics["best_test"])
             logger.info("best_valid_score: %f, test_score: %f, best_epoch: %d"
