@@ -94,15 +94,15 @@ def main():
         cross_fold_num = args.runs
         wandb.init()
         wandb.config.update(run.config, allow_val_change=True)
+        wandb.config.update({"seed": random.randint(0, 2 ** 32)}, allow_val_change=True)
         args = wandb.config
 
         logger.info(f"args: {args}")
         best_valid_scores, best_test_scores = [], []
-        seed = random.randint(0, 2 ** 32)
 
         for i in range(cross_fold_num):
-            logger.info("run: %d, seed: %d" % (i, seed))
-            set_seed(seed)
+            logger.info("run: %d, seed: %d" % (i, args.seed))
+            set_seed(args.seed)
             trainer = setup(args)
             best_metrics = trainer.train()
             best_valid_scores.append(best_metrics["best_valid"])
