@@ -90,12 +90,12 @@ def main():
     if args.cross_valid:
         assert args.wandb_id != ""
         logger = set_logger("ogbl-ppa", args.wandb_id)
+        wandb.init(reinit=True)
 
         api = wandb.Api()
         run = api.run(args.wandb_id)
 
         cross_fold_num = args.runs
-        wandb.init()
         wandb.config.update(run.config, allow_val_change=True)
         wandb.config.update({"seed": random.randint(0, 2 ** 32)}, allow_val_change=True)
         args = wandb.config
