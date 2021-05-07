@@ -105,7 +105,6 @@ def iterative_graclus(num_cl, edge_index):
 
 
 def get_vn_index(name, num_ns, num_vns, num_vns_conn, edge_index):
-    idx = None
     if name == "full":
         idx = torch.ones(num_vns, num_ns)
     elif name == "random":
@@ -125,11 +124,12 @@ def get_vn_index(name, num_ns, num_vns, num_vns_conn, edge_index):
         idx = torch.zeros(num_vns, num_ns)
         for i in range(num_vns):
             idx[i][n2cl == i] = 1
-    elif name == "metis":
+    elif "metis" in name:
         clu = ClusterData(Data(edge_index=edge_index), num_parts=num_vns)
         idx = torch.zeros(num_vns, num_ns)
         for i in range(num_vns):
             idx[i][clu.perm[clu.partptr[i]:clu.partptr[i+1]]] = 1
+
     else:
         raise ValueError(f"{name} is unsupported at this time!")
 
@@ -140,7 +140,7 @@ class VNGNN(torch.nn.Module):
     def __init__(self, in_channels, hidden_channels, out_channels, num_layers, dropout, num_nodes, edge_index,
                  model, num_vns=1, num_vns_conn=1, vn_idx="full",  # maybe choose a better name for this parameter...
                  aggregation="sum", graph_pool="sum", activation="relu", JK="last", gcn_normalize=True, gcn_cached=False,
-                 use_only_last=False):
+                 use_only_last=False, num_clusters=0):
         super().__init__()
         self.num_layers = num_layers
         self.convs = torch.nn.ModuleList()
@@ -163,10 +163,12 @@ class VNGNN(torch.nn.Module):
 
         self.num_nodes = num_nodes
         self.num_vns_conn = num_vns_conn
+        self.num_clusters = num_clusters
         self.vn_index_type = vn_idx
         # index[i] specifies which nodes are connected to VN i
-        self.vn_index = get_vn_index(vn_idx, num_nodes, num_vns, num_vns_conn, edge_index)
-        self.num_virtual_nodes = self.vn_index.shape[0] if self.vn_index is not None else num_vns  # might be > as num_vns in case we cannot split into less with graclus...
+        self.vn_index = get_vn_index(vn_idx, num_nodes, num_clusters if num_clusters > 0 else num_vns, num_vns_conn, edge_index)
+        self.cl_index = self.vn_index # this will be different later only for metis+
+        self.num_virtual_nodes = self.vn_index.shape[0] if self.vn_index is not None and vn_idx != "metis+" else num_vns  # might be > as num_vns in case we cannot split into less with graclus...
         self.virtual_node = torch.nn.Embedding(self.num_virtual_nodes, in_channels)
         torch.nn.init.constant_(self.virtual_node.weight.data, 0)  # set the initial virtual node embedding to 0.
 
@@ -207,6 +209,28 @@ class VNGNN(torch.nn.Module):
         for conv in self.convs:
             conv.reset_parameters()
 
+    def init_epoch(self):
+        if self.vn_index_type == "random-e":
+            self.vn_index = get_vn_index("random", self.num_nodes, self.num_virtual_nodes, self.num_vns_conn, None)
+        elif self.vn_index_type == "metis+":
+            # random assignment of clusters to VNs
+            vn2cl = get_vn_index("random", self.num_clusters, self.num_virtual_nodes, self.num_vns_conn, None)
+            # now propagate to node level
+            self.vn_index = torch.zeros(self.num_virtual_nodes, self.num_nodes)
+            for c in range(self.num_clusters):
+                self.vn_index[vn2cl[:, c].nonzero(), self.cl_index[c]] = 1
+                # somehow this did not work, see https://discuss.pytorch.org/t/slicing-and-assign/44707
+                # self.vn_index[vn2cl[:, c]][:, self.cl_index[c]] = 1
+            #     to test
+            # for n in range(self.num_nodes):
+            #     for c in range(self.num_clusters):
+            #         for v in range(self.num_virtual_nodes):
+            #             # print(self.cl_index[c, n], vn2cl[v, c], self.vn_index[v, n])
+            #             if (int(self.cl_index[c, n]) * int(vn2cl[v, c])):
+            #                 assert self.vn_index[v, n]
+
+            self.vn_index = self.vn_index == 1
+
     def forward(self, data):
         """
         x:              [# of nodes, # of features]
@@ -221,6 +245,9 @@ class VNGNN(torch.nn.Module):
             virtual_node = torch.zeros(1).to(x.device)
         else:
             virtual_node = self.virtual_node(torch.zeros(self.num_virtual_nodes).to(torch.long).to(x.device))
+
+        # if "metis" in self.vn_index_type and max(adj_t) + 1 != x.shape[0]:
+        #     raise RuntimeError("metis: need to add clusters for nodes not in edge index")
 
         if self.vn_index_type == "random-f":
             self.vn_index = get_vn_index("random", self.num_nodes, self.num_virtual_nodes, self.num_vns_conn, None)

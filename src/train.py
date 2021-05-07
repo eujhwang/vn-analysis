@@ -14,7 +14,7 @@ from torch_geometric.utils import negative_sampling
 from tqdm import tqdm
 
 from loss import loss_func
-
+from model.vngnn import VNGNN
 
 class Trainer:
     def __init__(
@@ -83,6 +83,9 @@ class Trainer:
 
             if self.epoch_transform is not None:
                 self.data = self.epoch_transform(self.data)
+
+            if isinstance(self.model, VNGNN):
+                self.model.init_epoch()
 
             total_loss = []
             pos_train_preds = []
@@ -187,6 +190,12 @@ class Evaluation:
         eval_start_time = time.time()
         self.model.eval()
         self.predictor.eval()
+
+        if self.epoch_transform is not None:
+            self.data = self.epoch_transform(self.data)
+
+        if isinstance(self.model, VNGNN):
+            self.model.init_epoch()
 
         h = self.model(self.data)
 
