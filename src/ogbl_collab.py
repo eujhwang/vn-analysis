@@ -52,6 +52,7 @@ def setup(args):
         dataset_id=dataset_id,
         model=model,
         predictor=predictor,
+        epoch_transform=epoch_transform,
         data=data,
         data_edge_dict=data_edge_dict,
         valid_pos_dataloader=valid_pos_dataloader,

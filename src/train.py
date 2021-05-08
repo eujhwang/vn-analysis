@@ -165,6 +165,7 @@ class Evaluation:
         dataset_id: str,
         model: Module,
         predictor: Module,
+        epoch_transform: Module,
         data: Any,
         data_edge_dict: Dict[str, Tensor],
         valid_pos_dataloader: DataLoader,
@@ -181,7 +182,7 @@ class Evaluation:
         self.valid_neg_dataloader = valid_neg_dataloader
         self.test_pos_dataloader = test_pos_dataloader
         self.test_neg_dataloader = test_neg_dataloader
-
+        self.epoch_transform = epoch_transform
         self._evaluator = Evaluator(name=dataset_id)
 
     @torch.no_grad()

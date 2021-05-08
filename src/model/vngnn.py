@@ -129,7 +129,6 @@ def get_vn_index(name, num_ns, num_vns, num_vns_conn, edge_index):
         idx = torch.zeros(num_vns, num_ns)
         for i in range(num_vns):
             idx[i][clu.perm[clu.partptr[i]:clu.partptr[i+1]]] = 1
-
     else:
         raise ValueError(f"{name} is unsupported at this time!")
 
@@ -138,7 +137,7 @@ def get_vn_index(name, num_ns, num_vns, num_vns_conn, edge_index):
 
 class VNGNN(torch.nn.Module):
     def __init__(self, in_channels, hidden_channels, out_channels, num_layers, dropout, num_nodes, edge_index,
-                 model, num_vns=1, num_vns_conn=1, vn_idx="full",  # maybe choose a better name for this parameter...
+                 model, num_vns=1, num_vns_conn=1, vn_idx="full",
                  aggregation="sum", graph_pool="sum", activation="relu", JK="last", gcn_normalize=True, gcn_cached=False,
                  use_only_last=False, num_clusters=0):
         super().__init__()
