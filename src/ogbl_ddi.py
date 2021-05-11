@@ -97,6 +97,10 @@ def main():
         cross_fold_num = args.runs
         wandb.config.update(run.config, allow_val_change=True)
         wandb.config.update({"seed": random.randint(0, 2 ** 32)}, allow_val_change=True)
+        if "use_only_last" not in run.config.keys():
+            wandb.config.update({"use_only_last": 0}, allow_val_change=True)
+        if "clusters" not in run.config.keys():
+            wandb.config.update({"clusters": 0}, allow_val_change=True)
         args = wandb.config
 
         logger.info(f"args: {args}")
