@@ -90,13 +90,13 @@ def main():
         assert args.wandb_id != ""
         logger = set_logger("ogbl-ddi", args.wandb_id)
         wandb.init(reinit=True)
-
+        seed = args.seed
         api = wandb.Api()
         run = api.run(args.wandb_id)
 
         cross_fold_num = args.runs
         wandb.config.update(run.config, allow_val_change=True)
-        wandb.config.update({"seed": random.randint(0, 2 ** 32)}, allow_val_change=True)
+        wandb.config.update({"seed": seed}, allow_val_change=True)
         if "use_only_last" not in run.config.keys():
             wandb.config.update({"use_only_last": 0}, allow_val_change=True)
         if "clusters" not in run.config.keys():
