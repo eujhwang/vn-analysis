@@ -273,7 +273,7 @@ class PGNN(torch.nn.Module):
         x = data.x
         if self.feature_pre:
             x = self.linear_pre(x)
-        x_position, x = self.conv_first(x, data.dists_max, data.dists_argmax)
+        x_position, x = self.conv_first(x, data.dists_max, data.dists_argmax).to(data.device)
         if self.layer_num == 1:
             return x_position
         # x = F.relu(x) # Note: optional!
