@@ -32,6 +32,8 @@ class PGNN_layer(nn.Module):
                     m.bias.data = init.constant_(m.bias.data, 0.0)
 
     def forward(self, feature, dists_max, dists_argmax):
+        dists_max = dists_max.to(feature.device)
+        dists_argmax = dists_argmax.to(feature.device)
         if self.dist_trainable:
             dists_max = self.dist_compute(dists_max.unsqueeze(-1)).squeeze()
 
