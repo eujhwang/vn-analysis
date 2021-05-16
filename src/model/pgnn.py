@@ -302,7 +302,7 @@ class PGNN_LinkPredictor(torch.nn.Module):
         # x_i: [65536]; [batch_size], x_j: [65536]; [batch_size], x: [65536]; [batch_size]
         x = x_i * x_j
         x = torch.sum(x, dim=-1)
-        return x  #torch.sigmoid(x)
+        return torch.sigmoid(x)
 
 
 
