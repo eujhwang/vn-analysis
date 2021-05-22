@@ -58,7 +58,7 @@ def iterative_diff_pool(num_clusters, numcl_p_n, x, adj, mask=None):
 # class Net(torch.nn.Module):
 #     def __init__(self, num_features, num_classes, max_nodes):
 #         super(Net, self).__init__()
-    num_features = x.shape[-1]
+    num_features = x.shape[-1] if x is not None else 0
     num_nodes = min(num_clusters*4, x.shape[0])  #ceil(0.25 * max_nodes)
     gnn1_pool = GNN(num_features, 64, num_nodes).to(x.device)
     gnn1_embed = GNN(num_features, 64, 64, lin=False).to(x.device)

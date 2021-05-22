@@ -81,8 +81,8 @@ class Trainer:
             self.model.train()
             self.predictor.train()
 
-            if self.epoch_transform is not None:
-                self.data = self.epoch_transform(self.data)
+            # if self.epoch_transform is not None:
+            #     self.data = self.epoch_transform(self.data)
 
             if isinstance(self.model, VNGNN):
                 self.model.init_epoch()
@@ -90,6 +90,9 @@ class Trainer:
             total_loss = []
             pos_train_preds = []
             for i, perm in enumerate(tqdm(self.train_dataloader)):
+
+                if self.epoch_transform is not None:  #TODO rename is no epoch transform anymore
+                    self.data = self.epoch_transform(self.data)
                 # perm: [batch_size]; [16384]
                 self.opt.zero_grad()
                 h = self.model(self.data)
