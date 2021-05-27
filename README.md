@@ -28,4 +28,4 @@ The corresponding example(s) from OGB is in ogb-examples/nodeproppred/proteins. 
 
     gcn virtual node model using 1 fully connected virtual node (aka. gcn-vn)
     
-`python src/ogbl_ppa.py --data_dir=../data --train_idx=train10 --model=gcn-vn --vns=1 --vns_conn=1 --vn_idx=full`
+`python src/ogbl_ppa.py --data_dir=data --train_idx=train10 --model=gcn-vn --vns=1 --vns_conn=1 --vn_idx=full`
