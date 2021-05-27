@@ -6,6 +6,7 @@
 <br/>(if you install locally w/o CUDA you may need to adapt the torch installation command)
 <br/> Aso, you need to have installed [Anaconda](https://www.anaconda.com/products/individual#Downloads). See the [Installation instructions](https://docs.anaconda.com/anaconda/install/).
 * Alternatively, install the above and the packages listed in [requirements.txt](requirements.txt)
+* For torch-geometric package installation, it's best to refer its original website: https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html
 
 NOTE I did not test the setup since I have everything installed on my machines. Please let me know if we have to fix this description, add packages or similar.
 
@@ -22,3 +23,8 @@ NOTE I did not test the setup since I have everything installed on my machines. 
 * `/src` 
 <br/> This is the code we plan to write. I created an example experiment for the ogbn-proteins dataset: ogbn_pro.py. 
 The corresponding example(s) from OGB is in ogb-examples/nodeproppred/proteins. But they copy a lot of code there. So I suggest to have a single logger/parser etc. file in our code and reuse those across experiments.
+
+* example command
+
+    gcn virtual node model using 1 fully connected virtual node (aka. gcn-vn)
+`python src/ogbl_ppa.py --data_dir=../data --train_idx=train10 --model=gcn-vn --vns=1 --vns_conn=1 --vn_idx=full`
