@@ -8,8 +8,7 @@ from model.utils import init_model
 # necessary to flush on some nodes, setting it globally here
 import functools
 print = functools.partial(print, flush=True)
-
-logger = set_logger("ogbl-ppa")
+logger = set_logger("ogbl-collab")
 
 def create_dataloader(data_edge_dict: Dict[str, Tensor], log_batch_size: int):
     pos_train_edge = data_edge_dict["train"]["edge"]
@@ -30,10 +29,9 @@ def create_dataloader(data_edge_dict: Dict[str, Tensor], log_batch_size: int):
 
 def setup(args):
     device = cuda_if_available(args.device)
-    dataset_id = "ogbl-ppa"
+    dataset_id = "ogbl-collab"
     data_dir = Path(args.data_dir).expanduser()
     data, data_edge_dict, epoch_transform = create_dataset(args, dataset_id, data_dir)
-    logger.info("data:", data)
     data = data.to(device)
 
     train_dataloader, valid_pos_dataloader, valid_neg_dataloader, test_pos_dataloader, test_neg_dataloader = create_dataloader(data_edge_dict, args.log_batch_size)
@@ -78,7 +76,7 @@ def setup(args):
 
 
 def main():
-    args = build_args("ppa")
+    args = build_args("collab")
     assert args.model  # must not be empty for node property prediction
     logger.info("args: %s" % args)
     set_seed(args.seed)
