@@ -17,7 +17,6 @@ import pandas as pd
 from utils.to_dense import ToDense
 from utils.to_sparse_tensor import ToSparseTensor
 from model.pgnn_utils import PGNN_Transform
-from model.kgnn_transform import TwoMalkin, ConnectedThreeMalkin
 
 def save_args(args, fn):
     with open(fn, 'w') as f:
@@ -106,9 +105,6 @@ def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
         # precompute anchors, distances
         transform = PGNN_Transform(args.layers, args.anchors, args.approximate)
         epoch_transform = transform  # need to call this during training too
-    elif args.model == "123gnn":
-        # this just adds attributes to data based on edge_index
-        transform = T.Compose([TwoMalkin(), ConnectedThreeMalkin()])
     else:  # do nothing
         transform = lambda x: x
 
