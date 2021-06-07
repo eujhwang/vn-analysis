@@ -1,31 +1,59 @@
-# OGB Revisited
+# Virtual Nodes Revisited
 
+**TL;DR**
+We propose new methods for extending GNNs with virtual nodes for link prediction.
+
+
+<p align="center">
+
+![](./pic.png)
+
+</p>
+
+
+Virtual nodes are well known to often improve the graph classification performance of graph neural networks, where a single artificial virtual node is added to every graph and connected to all nodes in the graph [1,2,3,4]. 
+
+**We propose to use multiple virtual nodes in the link prediction scenario and describe a graph-based technique to connect them to the graph nodes.** 
+In a nutshell, we use a graph clustering algorithm to determine groups of nodes in the graph that belong together and then connect these nodes to a common virtual node. In this way, under-reaching is decreased because clustered nodes can share information easily; at the same time, the nodes are spared of unnecessary information from unrelated nodes (i.e., in contrast to the single virtual node model).
+More details are given in [our paper](./paper.pdf).
 ## Installation
-* Tested with Python 3.7, PyTorch 1.7.1., and PyTorch Geometric 1.6.3
+* Tested with Python 3.8, PyTorch 1.8.1., and PyTorch Geometric 1.6.3.
 * Set up an Anaconda environment: `./setup.sh` 
-<br/>(if you install locally w/o CUDA you may need to adapt the torch installation command)
-<br/> Aso, you need to have installed [Anaconda](https://www.anaconda.com/products/individual#Downloads). See the [Installation instructions](https://docs.anaconda.com/anaconda/install/).
+<br/>(see comments in script)
+<br/> Also, you need to have installed [Anaconda](https://www.anaconda.com/products/individual#Downloads). See its [Installation instructions](https://docs.anaconda.com/anaconda/install/).
 * Alternatively, install the above and the packages listed in [requirements.txt](requirements.txt)
-* For torch-geometric package installation, it's best to refer its original website: https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html
 
-NOTE I did not test the setup since I have everything installed on my machines. Please let me know if we have to fix this description, add packages or similar.
+## Data
 
-## Overview
+* We used the link prediction datasets from the [Open Graph Benchmark](https://ogb.stanford.edu/). 
+* When running the first time with a new dataset, the code will first download and preprocess the data. It will reuse these files with later runs.
 
-* `/data` 
-<br/>The datasets are downloaded into here by default. We also store auxiliary data here (e.g., index files selecting subsets of the training sets to train on those).
-* `/ogb-examples` 
-<br/>The original "examples" directory from the [Open Graph Benchmark (OGB)](https://github.com/snap-stanford/ogb). We just have it here to easy check them and create our experiments based on those.
-* `/papers` 
-<br/>Papers about the GNNs we plan to look at in the project.
-* `/scripts`
-<br/>Scripts for running the experiments.
-* `/src` 
-<br/> This is the code we plan to write. I created an example experiment for the ogbn-proteins dataset: ogbn_pro.py. 
-The corresponding example(s) from OGB is in ogb-examples/nodeproppred/proteins. But they copy a lot of code there. So I suggest to have a single logger/parser etc. file in our code and reuse those across experiments.
 
-* example command
-
-    gcn virtual node model using 1 fully connected virtual node (aka. gcn-vn)
+## Example Command
+To run GCN extended with 1 virtual node (aka. `GCN-VN`) over `ogbl-ddi` run:
     
-`python src/ogbl_ppa.py --data_dir=data --train_idx=train10 --model=gcn-vn --vns=1 --vns_conn=1 --vn_idx=full`
+`python src/ogbl_ddi.py --data_dir=data --model=gcn-vn --vns=1 --vn_idx=full`
+
+For all possible parameter options see [here](./src/utils/parser.py).
+<br/>Please leave an issue if you have any trouble running the code.
+
+## Paper
+
+If the code is helpful for your project, please cite [our paper](./paper.pdf) (Bibtex below).
+```
+@article{hwang2021vns,
+  title={Revisiting Virtual Nodes in Graph Neural Networks for Link Prediction},
+  author={EunJeong Hwang, Veronika Thost, Shib Sankar Dasgupta, Tengfei Ma},
+  journal={arXiv preprint arXiv:2005.00687}, TBD
+  year={2020}
+}
+```
+
+## References
+
+* [1] Gilmer et al. [Neural Message Passing for Quantum Chemistry](https://arxiv.org/pdf/1704.01212.pdf), ICML 2017.
+* [2] Li et al. [Learning Graph-Level Representation for Drug Discovery](http://arxiv.org/abs/1709.03741), arXiv preprint 2017.
+* [3]  Pham et al. [Graph Classification via Deep Learning with Virtual Nodes](https://arxiv.org/pdf/1708.04357.pdf), arXiv preprint 2017.
+* [4]  Ishiguro et al. [Graph Warp Module: an Auxiliary Module for Boosting the Power of Graph Neural Networks](https://arxiv.org/pdf/1902.01020.pdf), arXiv preprint 2019.
+
+

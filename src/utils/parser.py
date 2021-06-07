@@ -18,17 +18,16 @@ def register_default_args(parser, ident):
     parser.add_argument('--device', type=int, default=0)
     parser.add_argument('--eval_steps', type=int, default=1)  # LEAVE 1 for now since logger not adapted for others yet
     parser.add_argument('--lr', type=float, default=0.001)
-    parser.add_argument('--epochs', type=int, default=500 if torch.cuda.is_available() else 30)  # ogbn-pro default
-    parser.add_argument('--patience', default=50, type=int)  # ogbn-pro default
-    parser.add_argument('--log_batch_size', type=int, default=14)  #ogbl-ppa: 14, ddi:16 only
+    parser.add_argument('--epochs', type=int, default=500 if torch.cuda.is_available() else 30)
+    parser.add_argument('--patience', default=50, type=int)
+    parser.add_argument('--log_batch_size', type=int, default=14)
     parser.add_argument('--data_dir', type=str, default="data")
     parser.add_argument('--model', type=str, default="gcn",
                         choices=["mlp", "gcn", "sage", "mlp", "gat", "sgc", "gin",
-                                 "appnp", "gcn-gdc", "sage-gdc", "gin-gdc", "pgnn", "123gnn",
+                                 "appnp", "gcn-gdc", "sage-gdc", "gin-gdc", "pgnn",
                                  "gcn-vn", "sage-vn", "gin-vn"])
     parser.add_argument('--clusters', type=int, default=0)  # metis+
     parser.add_argument('--vns', type=int, default=0)
-    parser.add_argument('--vns_conn', type=int, default=3)  # is ignored (always considered 1) with graclus currently
     parser.add_argument('--vn_idx', type=str, default="full", choices=["full", "random", "random-f", "random-e", "graclus", "diffpool", "metis", "metis+"])
     parser.add_argument('--K', type=int, default=10)  # different meanings in different models
     parser.add_argument('--alpha', type=float, default=0.5)
@@ -69,4 +68,4 @@ def register_default_args(parser, ident):
     parser.add_argument('--use_only_last', type=int, default=0, help="0: false, 1: true")
 
     parser.add_argument('--cross_valid', type=int, default=0, help="0: false, 1: true")
-    parser.add_argument('--runs', type=int, default=1, help="# of cross validation")
+    parser.add_argument('--runs', type=int, default=1, help="# of runs")

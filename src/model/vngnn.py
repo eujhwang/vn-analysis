@@ -10,6 +10,8 @@ from torch_geometric.data import ClusterData, Data
 from torch_cluster import graclus_cluster
 from tqdm import tqdm
 
+import time
+
 from model.diff_pool_iterative import iterative_diff_pool
 
 def get_conv_layer(name, in_channels, hidden_channels, out_channels, gcn_normalize, gcn_cached):
@@ -137,15 +139,13 @@ def get_vn_index(name, num_ns, num_vns, num_vns_conn, edge_index):
 
 class VNGNN(torch.nn.Module):
     def __init__(self, in_channels, hidden_channels, out_channels, num_layers, dropout, num_nodes, edge_index,
-                 model, num_vns=1, num_vns_conn=1, vn_idx="full",
+                 model, num_vns=1, vn_idx="full",
                  aggregation="sum", graph_pool="sum", activation="relu", JK="last", gcn_normalize=True, gcn_cached=False,
                  use_only_last=False, num_clusters=0):
         super().__init__()
         self.num_layers = num_layers
         self.convs = torch.nn.ModuleList()
         self.batch_norms = torch.nn.ModuleList()
-
-        assert vn_idx != "graclus" or num_vns_conn == 1, "graclus only works with num_vns_conn = 1"
 
         if num_layers == 1:
             self.convs.append(get_conv_layer(model, in_channels, hidden_channels, out_channels, gcn_normalize=gcn_normalize, gcn_cached=gcn_cached))
@@ -161,11 +161,11 @@ class VNGNN(torch.nn.Module):
         self.batch_norms.append(BatchNorm1d(out_channels))
 
         self.num_nodes = num_nodes
-        self.num_vns_conn = num_vns_conn
+        self.num_vns_conn = 1
         self.num_clusters = num_clusters
         self.vn_index_type = vn_idx
         # index[i] specifies which nodes are connected to VN i
-        self.vn_index = get_vn_index(vn_idx, num_nodes, num_clusters if num_clusters > 0 else num_vns, num_vns_conn, edge_index)
+        self.vn_index = get_vn_index(vn_idx, num_nodes, num_clusters if num_clusters > 0 else num_vns, 1, edge_index)
         self.cl_index = self.vn_index # this will be different later only for metis+
         self.num_virtual_nodes = self.vn_index.shape[0] if self.vn_index is not None and vn_idx != "metis+" else num_vns  # might be > as num_vns in case we cannot split into less with graclus...
         self.virtual_node = torch.nn.Embedding(self.num_virtual_nodes, in_channels)
@@ -245,30 +245,20 @@ class VNGNN(torch.nn.Module):
         else:
             virtual_node = self.virtual_node(torch.zeros(self.num_virtual_nodes).to(torch.long).to(x.device))
 
-        # if "metis" in self.vn_index_type and max(adj_t) + 1 != x.shape[0]:
-        #     raise RuntimeError("metis: need to add clusters for nodes not in edge index")
-
         if self.vn_index_type == "random-f":
             self.vn_index = get_vn_index("random", self.num_nodes, self.num_virtual_nodes, self.num_vns_conn, None)
         elif self.vn_index == None and self.vn_index_type == "diffpool":  # currengtlhy the second condition is always true
             self.vn_index = iterative_diff_pool(self.num_virtual_nodes, self.num_vns_conn, x, adj)
 
-        embs = [x]
-        for layer in range(self.num_layers):
             # vn_index: [# of vns, # of nodes], vn_index.T: [# of nodes, # of vns]
             # vn_index.T.nonzero(): [# of nodes * vns_conn, 2]; [:, 0]: graph node index [:, 1]: virtual node index
-            vn_indices = torch.nonzero(self.vn_index.T).to(x.device)
+        vn_indices = torch.nonzero(self.vn_index.T).to(x.device)
+
+        embs = [x]
+        for layer in range(self.num_layers):
             # select corresponding virtual node vector using vn_indices[:, 1]
             selected_vns = torch.index_select(virtual_node, 0, vn_indices[:, 1].to(torch.long))
-
-            # scatter_[op]
-            # [op] all values from the input at the indices specified in the index tensor along a given axis dim.
-            if self.aggregation == "sum":
-                new_x = embs[layer] + torch_scatter.scatter_add(selected_vns, vn_indices[:, 0].to(torch.long), dim=0)
-            elif self.aggregation == "mean":
-                new_x = embs[layer] + torch_scatter.scatter_mean(selected_vns, vn_indices[:, 0].to(torch.long), dim=0)
-            elif self.aggregation == "max":
-                new_x = embs[layer] + torch_scatter.scatter_max(selected_vns, vn_indices[:, 0].to(torch.long), dim=0)[0]
+            new_x = embs[layer] + selected_vns
             new_x = self.convs[layer](new_x, adj_t)  # GCN layer
             new_x = self.batch_norms[layer](new_x)
             new_x = F.relu(new_x)

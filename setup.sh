@@ -1,30 +1,26 @@
 #!/usr/bin/env bash
 
-if source activate ogb; then
+if source activate pyg; then
 	:
 else
-	echo 'Creating environment'
-	conda create -n ogb python=3.7 -y
-	source activate ogb
+	echo 'Creating environment pyg'
+	conda create -n pyg python=3.8 -y
+	source activate pyg
 fi
 
-CUDA=$($PYTHON -c "import torch; print(torch.version.cuda)")
+# TODO 1: Install PyTorch
+#  use command for your system: https://pytorch.org/
+#  (scroll down to "INSTALL PYTORCH" and choose the parameters for your system)
+# e.g.
+# conda install pytorch==1.7.1 torchvision==0.8.2 torchaudio==0.7.2 cpuonly -c pytorch
 
-# see instructions at https://pytorch.org/get-started/locally/
-conda install pytorch torchvision torchaudio cudatoolkit=$CUDA -c pytorch
 
-TORCH=$($PYTHON -c "import torch; print(torch.__version__)")
-TORCH=${TORCH:0:5}
-
-if [ "${CUDA}" = "None" ]; then
-  CUDA="cpu"
-else
-  CUDA="cu${CUDA/./}"
-fi
-
-pip install torch-scatter -f https://pytorch-geometric.com/whl/torch-${TORCH}+${CUDA}.html
-pip install torch-sparse -f https://pytorch-geometric.com/whl/torch-${TORCH}+${CUDA}.html
-pip install torch-cluster -f https://pytorch-geometric.com/whl/torch-${TORCH}+${CUDA}.html
-pip install torch-spline-conv -f https://pytorch-geometric.com/whl/torch-${TORCH}+${CUDA}.html
-pip install torch-geometric
-pip install -r requirements.txt
+# TODO 2: Install PyTorch Geometric (after having installed pytorch)
+#  see PyTorch Geometric's installation instructions: https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html
+#GPU=
+#TORCH=
+#pip install torch-scatter -f https://pytorch-geometric.com/whl/torch-${TORCH}+${CUDA}.html
+#pip install torch-sparse -f https://pytorch-geometric.com/whl/torch-${TORCH}+${CUDA}.html
+#pip install torch-cluster -f https://pytorch-geometric.com/whl/torch-${TORCH}+${CUDA}.html
+#pip install torch-spline-conv -f https://pytorch-geometric.com/whl/torch-${TORCH}+${CUDA}.html
+#pip install torch-geometric
