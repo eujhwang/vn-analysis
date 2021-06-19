@@ -126,9 +126,12 @@ def get_vn_index(name, num_ns, num_vns, num_vns_conn, edge_index):
             idx[i][n2cl == i] = 1
     elif "metis" in name:
         clu = ClusterData(Data(edge_index=edge_index), num_parts=num_vns)
+        diff = num_ns - len(clu.perm) # if some nodes with idx>max_id, then diff > 0
         idx = torch.zeros(num_vns, num_ns)
         for i in range(num_vns):
             idx[i][clu.perm[clu.partptr[i]:clu.partptr[i+1]]] = 1
+        num_vns = max(clu.perm).item()+1
+        idx[-1][num_vns:num_vns+diff] = 1 # assign 1 if diff > 0
     else:
         raise ValueError(f"{name} is unsupported at this time!")
 
