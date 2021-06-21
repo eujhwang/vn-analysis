@@ -124,10 +124,24 @@ def main():
         wandb.init()
         wandb.config.update(args, allow_val_change=True)
         args = wandb.config
-        set_seed(args.seed)
+        logger = set_logger_(f"ogbl-ddi-{args.runs}runs")
         trainer = setup(args)
-        trainer.train()
+        best_valid_scores, best_test_scores = [], []
+        for i in range(args.runs):
+            logger.info("run: %d, seed: %d" % (i, i))
+            set_seed(i)
+            best_metrics = trainer.train()
+            best_valid_scores.append(best_metrics["best_valid"])
+            best_test_scores.append(best_metrics["best_test"])
+            logger.info("best_valid_score: %f, test_score: %f, best_epoch: %d"
+                        % (best_metrics["best_valid"], best_metrics["best_test"], best_metrics["best_epoch"]))
 
+        best_valid_score_tensor = torch.tensor(best_valid_scores)
+        best_test_score_tensor = torch.tensor(best_test_scores)
+        logger.info(f"Best Valid: {best_valid_score_tensor.mean():.2f} ± {best_valid_score_tensor.std():.2f}")
+        logger.info(f"Final Test: {best_test_score_tensor.mean():.2f} ± {best_test_score_tensor.std():.2f}")
+
+        wandb.log({"Best Valid Score - Multiple Runs" : best_valid_score_tensor.mean()})
 
 if __name__ == "__main__":
     main()

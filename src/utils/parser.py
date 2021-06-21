@@ -71,7 +71,7 @@ def register_default_args(parser, ident):
 
     parser.add_argument('--cross_valid', type=int, default=0, help="0: false, 1: true")
     parser.add_argument('--wandb_id', type=str, default="", help="wandb run path")
-    parser.add_argument('--runs', type=int, default=1, help="# of cross validation")
+    parser.add_argument('--runs', type=int, default=1, help="# of runs")
 
 def kg_parse_args():
     parser = argparse.ArgumentParser(

@@ -166,30 +166,28 @@ def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
     return data, data_edge_dict, epoch_transform
 
 
-def set_logger(args):
-    '''
-    Write logs to checkpoint and console
-    '''
+def set_logger_(dataset_id: str):
+    timestamp = datetime.fromtimestamp(time.time()).strftime('%Y%m%d%H%M')
+    log_dir = "./log/"
+    Path(log_dir).mkdir(parents=True, exist_ok=True)
+    logging_path = log_dir + f"{dataset_id}_{timestamp}.log"
 
-    if args.do_train:
-        log_file = os.path.join(args.save_path or args.init_checkpoint, 'train.log')
-    else:
-        log_file = os.path.join(args.save_path or args.init_checkpoint, 'test.log')
+    # Remove all handlers associated with the root logger object.
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
 
     logging.basicConfig(
-        format='%(asctime)s %(levelname)-8s %(message)s',
         level=logging.INFO,
-        datefmt='%Y-%m-%d %H:%M:%S',
-        filename=log_file,
-        filemode='w'
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        handlers=[
+            logging.FileHandler(logging_path),
+            logging.StreamHandler()
+        ]
     )
 
-    if args.print_on_screen:
-        console = logging.StreamHandler()
-        console.setLevel(logging.INFO)
-        formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s')
-        console.setFormatter(formatter)
-        logging.getLogger('').addHandler(console)
+    logger = logging.getLogger(__name__)
+    logger.info("log file is saved at: %s" % os.path.abspath(logging_path))
+    return logger
 
 
 def set_logger(dataset_id: str, wandb_id: str):
