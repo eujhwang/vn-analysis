@@ -118,8 +118,8 @@ def main():
 
         best_valid_score_tensor = torch.tensor(best_valid_scores)
         best_test_score_tensor = torch.tensor(best_test_scores)
-        logger.info(f"Best Valid: {best_valid_score_tensor.mean():.2f} ± {best_valid_score_tensor.std():.2f}")
-        logger.info(f"Final Test: {best_test_score_tensor.mean():.2f} ± {best_test_score_tensor.std():.2f}")
+        logger.info(f"Best Valid: {best_valid_score_tensor.mean():.4f} ± {best_valid_score_tensor.std():.4f}")
+        logger.info(f"Final Test: {best_test_score_tensor.mean():.4f} ± {best_test_score_tensor.std():.4f}")
     else:
         wandb.init()
         wandb.config.update(args, allow_val_change=True)
@@ -138,8 +138,8 @@ def main():
 
         best_valid_score_tensor = torch.tensor(best_valid_scores)
         best_test_score_tensor = torch.tensor(best_test_scores)
-        logger.info(f"Best Valid: {best_valid_score_tensor.mean():.2f} ± {best_valid_score_tensor.std():.2f}")
-        logger.info(f"Final Test: {best_test_score_tensor.mean():.2f} ± {best_test_score_tensor.std():.2f}")
+        logger.info(f"Best Valid: {best_valid_score_tensor.mean():.4f} ± {best_valid_score_tensor.std():.4f}")
+        logger.info(f"Final Test: {best_test_score_tensor.mean():.4f} ± {best_test_score_tensor.std():.4f}")
 
         wandb.log({"Best Valid Score - Multiple Runs" : best_valid_score_tensor.mean()})
 
