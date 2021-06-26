@@ -125,7 +125,6 @@ def main():
         wandb.config.update(args, allow_val_change=True)
         args = wandb.config
         logger = set_logger_(f"ogbl-ddi-{args.runs}runs")
-        trainer = setup(args)
         best_valid_scores, best_test_scores = [], []
         for i in range(args.runs):
             if i == 0:
@@ -134,6 +133,7 @@ def main():
                 seed = i
             logger.info("run: %d, seed: %d" % (i, seed))
             set_seed(seed)
+            trainer = setup(args)
             best_metrics = trainer.train()
             best_valid_scores.append(best_metrics["best_valid"])
             best_test_scores.append(best_metrics["best_test"])
