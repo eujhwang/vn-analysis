@@ -128,8 +128,12 @@ def main():
         trainer = setup(args)
         best_valid_scores, best_test_scores = [], []
         for i in range(args.runs):
-            logger.info("run: %d, seed: %d" % (i, i))
-            set_seed(i)
+            if i == 0:
+                seed = random.randint(0, 2 ** 32)
+            else:
+                seed = i
+            logger.info("run: %d, seed: %d" % (i, seed))
+            set_seed(seed)
             best_metrics = trainer.train()
             best_valid_scores.append(best_metrics["best_valid"])
             best_test_scores.append(best_metrics["best_test"])
