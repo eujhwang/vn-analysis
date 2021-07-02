@@ -31,7 +31,7 @@ def create_dataloader(data_edge_dict: Dict[str, Tensor], log_batch_size: int):
     return train_dataloader, valid_pos_dataloader, valid_neg_dataloader, test_pos_dataloader, test_neg_dataloader
 
 
-def setup(args):
+def setup(args, model_state_dict=None, predictor_state_dict=None):
     device = cuda_if_available(args.device)
     dataset_id = "ogbl-ppa"
     data_dir = Path(args.data_dir).expanduser()
@@ -43,6 +43,11 @@ def setup(args):
     train_dataloader, valid_pos_dataloader, valid_neg_dataloader, test_pos_dataloader, test_neg_dataloader = create_dataloader(data_edge_dict, args.log_batch_size)
 
     model, predictor = init_model(args, data, dataset_id, outdim=None)
+
+    if model_state_dict and predictor_state_dict:
+        print("load_state_dict model and predictor")
+        model.load_state_dict(model_state_dict)
+        predictor.load_state_dict(predictor_state_dict)
     model = model.to(device)
     predictor = predictor.to(device)
 
@@ -81,7 +86,7 @@ def setup(args):
         patience=args.patience,
     )
 
-    return trainer
+    return trainer, evaluation
 
 
 def main():
@@ -111,7 +116,7 @@ def main():
         for i in range(cross_fold_num):
             logger.info("run: %d, seed: %d" % (i, args.seed))
             set_seed(args.seed)
-            trainer = setup(args)
+            trainer, evaluation = setup(args)
             best_metrics = trainer.train()
             best_valid_scores.append(best_metrics["best_valid"])
             best_test_scores.append(best_metrics["best_test"])
@@ -122,12 +127,43 @@ def main():
         best_test_score_tensor = torch.tensor(best_test_scores)
         logger.info(f"Best Valid: {best_valid_score_tensor.mean():.2f} ± {best_valid_score_tensor.std():.2f}")
         logger.info(f"Final Test: {best_test_score_tensor.mean():.2f} ± {best_test_score_tensor.std():.2f}")
+    elif args.load_model:
+        assert args.saved_model != ""
+        assert args.wandb_id != ""
+        logger = set_logger("ogbl-ppa", args.wandb_id)
+        model_state_dict_path = Path(args.saved_model).expanduser()
+        predictor_state_dict_path = Path(args.saved_predictor).expanduser()
+        print("Loading model state dict...", end="", flush=True)
+        model_state_dict = torch.load(model_state_dict_path, map_location="cpu")
+        print("done!")
+
+        print("Loading predictor state dict...", end="", flush=True)
+        predictor_state_dict = torch.load(predictor_state_dict_path, map_location="cpu")
+        print("done!")
+        wandb.init()
+
+        api = wandb.Api()
+        run = api.run(args.wandb_id)
+        wandb.config.update(run.config, allow_val_change=True)
+        wandb.config.update({"wandb_id": args.wandb_id}, allow_val_change=True)
+        for key,value in sorted(vars(args).items()):
+            if key not in wandb.config.keys():
+                wandb.config.update({key: value}, allow_val_change=True)
+
+        args = wandb.config
+        logger.info(f"args: {args}")
+        trainer, evaluation = setup(args, model_state_dict, predictor_state_dict)
+        results = evaluation.evaluate()
+        logger.info(results)
+        wandb.log(results)
+        trainer.train()
+
     else:
         wandb.init()
         wandb.config.update(args, allow_val_change=True)
         args = wandb.config
         set_seed(args.seed)
-        trainer = setup(args)
+        trainer, evaluation = setup(args)
         trainer.train()
 
 

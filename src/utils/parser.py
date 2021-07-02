@@ -70,6 +70,9 @@ def register_default_args(parser, ident):
     parser.add_argument('--use_only_last', type=int, default=0, help="0: false, 1: true")
 
     parser.add_argument('--cross_valid', type=int, default=0, help="0: false, 1: true")
+    parser.add_argument('--load_model', type=int, default=0, help="0: false, 1: true")
+    parser.add_argument('--saved_model', type=str, default="", help="saved model path")
+    parser.add_argument('--saved_predictor', type=str, default="", help="saved predictor path")
     parser.add_argument('--wandb_id', type=str, default="", help="wandb run path")
     parser.add_argument('--runs', type=int, default=1, help="# of runs")
 

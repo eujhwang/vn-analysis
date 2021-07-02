@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import os
 from pathlib import Path
 from typing import *
 import torch
@@ -57,7 +58,8 @@ class Trainer:
         timestamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d%H%M%S')
         self.model_save_dir = "./saved_model/"
         Path(self.model_save_dir).mkdir(parents=True, exist_ok=True)
-        self.model_save_path = self.model_save_dir + f"{dataset_id}_{timestamp}_{wandb_id}.pt"
+        self.model_save_path = self.model_save_dir + f"{dataset_id}_model_{timestamp}_{wandb_id}.pt"
+        self.predictor_save_path = self.model_save_dir + f"{dataset_id}_predictor_{timestamp}_{wandb_id}.pt"
 
     def update_save_best_score(self, valid_score: float, test_score: float, epoch: int):
         if self.best_valid_score < valid_score:
@@ -65,8 +67,9 @@ class Trainer:
             self.best_test_score = test_score
             self.best_epoch = epoch
             torch.save(self.model.state_dict(), self.model_save_path)
-            print("model is saved here: %s, best epoch: %s, best valid f1 score: %f, best test f1 score: %f"
-                  % (self.model_save_path, self.best_epoch, self.best_valid_score, self.best_test_score))
+            torch.save(self.predictor.state_dict(), self.predictor_save_path)
+            print("model is saved here: %s, predictor saved path: %s, best epoch: %s, best valid f1 score: %f, best test f1 score: %f"
+                  % (os.path.abspath(self.model_save_path), os.path.abspath(self.predictor_save_path), self.best_epoch, self.best_valid_score, self.best_test_score))
 
     def train(self):
         print("Training start..")
@@ -245,11 +248,12 @@ class Evaluation:
         for K in [10, 20, 30, 50, 100]:
             self._evaluator.K = K
             # dummy train, using valid
-            train_hits = self._evaluator.eval({
-                'y_pred_pos': pos_train_pred,
-                'y_pred_neg': neg_valid_pred,
-            })[f'hits@{K}']
-            results[f"[Train] Hits@{K}"] = train_hits
+            if pos_train_pred is not None:
+                train_hits = self._evaluator.eval({
+                    'y_pred_pos': pos_train_pred,
+                    'y_pred_neg': neg_valid_pred,
+                })[f'hits@{K}']
+                results[f"[Train] Hits@{K}"] = train_hits
             valid_hits = self._evaluator.eval({
                 'y_pred_pos': pos_valid_pred,
                 'y_pred_neg': neg_valid_pred,
