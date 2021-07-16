@@ -1,4 +1,5 @@
 import pickle
+from pathlib import Path
 from typing import Optional
 import torch
 import torch.nn.functional as F
@@ -102,7 +103,7 @@ def iterative_graclus(num_cl, edge_index):
     return n2cl
 
 
-def get_vn_index(name, num_ns, num_vns, num_vns_conn, edge_index):
+def get_vn_index(name, num_ns, num_vns, num_vns_conn, edge_index, dataset):
     if name == "full":
         idx = torch.ones(num_vns, num_ns)
     elif name == "random":
@@ -123,7 +124,10 @@ def get_vn_index(name, num_ns, num_vns, num_vns_conn, edge_index):
         for i in range(num_vns):
             idx[i][n2cl == i] = 1
     elif "metis" in name:
-        clu = ClusterData(Data(edge_index=edge_index), num_parts=num_vns)
+        cluster_save_dir = "./saved_clusters/" + f"{dataset}/"
+        Path(cluster_save_dir).mkdir(parents=True, exist_ok=True)
+
+        clu = ClusterData(Data(edge_index=edge_index), num_parts=num_vns, save_dir=cluster_save_dir)
         diff = num_ns - len(clu.perm) # if some nodes with idx>max_id, then diff > 0
         idx = torch.zeros(num_vns, num_ns)
         for i in range(num_vns):
@@ -140,7 +144,7 @@ class VNGNN(torch.nn.Module):
     def __init__(self, in_channels, hidden_channels, out_channels, num_layers, dropout, num_nodes, edge_index,
                  model, num_vns=1, num_vns_conn=1, vn_idx="full",
                  aggregation="sum", graph_pool="sum", activation="relu", JK="last", gcn_normalize=True, gcn_cached=False,
-                 use_only_last=False, num_clusters=0):
+                 use_only_last=False, num_clusters=0, dataset=""):
         super().__init__()
         self.num_layers = num_layers
         self.convs = torch.nn.ModuleList()
@@ -165,8 +169,9 @@ class VNGNN(torch.nn.Module):
         self.num_vns_conn = num_vns_conn
         self.num_clusters = num_clusters
         self.vn_index_type = vn_idx
+        self.dataset_id = dataset
         # index[i] specifies which nodes are connected to VN i
-        self.vn_index = get_vn_index(vn_idx, num_nodes, num_clusters if num_clusters > 0 else num_vns, num_vns_conn, edge_index)
+        self.vn_index = get_vn_index(vn_idx, num_nodes, num_clusters if num_clusters > 0 else num_vns, num_vns_conn, edge_index, dataset)
         self.cl_index = self.vn_index # this will be different later only for metis+
         self.num_virtual_nodes = self.vn_index.shape[0] if self.vn_index is not None and vn_idx != "metis+" else num_vns  # might be > as num_vns in case we cannot split into less with graclus...
         self.virtual_node = torch.nn.Embedding(self.num_virtual_nodes, in_channels)
@@ -211,10 +216,10 @@ class VNGNN(torch.nn.Module):
 
     def init_epoch(self):
         if self.vn_index_type == "random-e":
-            self.vn_index = get_vn_index("random", self.num_nodes, self.num_virtual_nodes, self.num_vns_conn, None)
+            self.vn_index = get_vn_index("random", self.num_nodes, self.num_virtual_nodes, self.num_vns_conn, None, self.dataset_id)
         elif self.vn_index_type == "metis+":
             # random assignment of clusters to VNs
-            vn2cl = get_vn_index("random", self.num_clusters, self.num_virtual_nodes, self.num_vns_conn, None)
+            vn2cl = get_vn_index("random", self.num_clusters, self.num_virtual_nodes, self.num_vns_conn, None, self.dataset_id)
             # now propagate to node level
             self.vn_index = torch.zeros(self.num_virtual_nodes, self.num_nodes)
             for c in range(self.num_clusters):
@@ -250,7 +255,7 @@ class VNGNN(torch.nn.Module):
         #     raise RuntimeError("metis: need to add clusters for nodes not in edge index")
 
         if self.vn_index_type == "random-f":
-            self.vn_index = get_vn_index("random", self.num_nodes, self.num_virtual_nodes, self.num_vns_conn, None)
+            self.vn_index = get_vn_index("random", self.num_nodes, self.num_virtual_nodes, self.num_vns_conn, None, self.dataset_id)
         elif self.vn_index == None and self.vn_index_type == "diffpool":  # currengtlhy the second condition is always true
             self.vn_index = iterative_diff_pool(self.num_virtual_nodes, self.num_vns_conn, x, adj)
 
