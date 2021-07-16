@@ -6,6 +6,7 @@ import warnings
 from datetime import datetime
 
 import torch
+import numpy as np
 from pathlib import Path
 from typing import *
 from ogb.linkproppred import PygLinkPropPredDataset, LinkPropPredDataset
@@ -83,9 +84,10 @@ def cuda_if_available(device) -> torch.device:
 def set_seed(seed: int):
     torch.manual_seed(seed)
     random.seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed(seed)
-        # torch.backends.cudnn.benchmark = True
+    np.random.seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
 
 
 def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
