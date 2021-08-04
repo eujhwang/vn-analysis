@@ -6,14 +6,14 @@ import torch.nn.functional as F
 import torch_scatter
 from torch.nn import Sequential, Linear, ReLU, Conv2d, BatchNorm1d, LeakyReLU, Softplus, ELU
 from torch_geometric.nn import GCNConv, SAGEConv, GINConv, global_mean_pool, global_add_pool, global_max_pool, \
-    GlobalAttention
+    GlobalAttention, GATConv
 from torch_geometric.data import ClusterData, Data
 from torch_cluster import graclus_cluster
 from tqdm import tqdm
 
 from model.diff_pool_iterative import iterative_diff_pool
 
-def get_conv_layer(name, in_channels, hidden_channels, out_channels, gcn_normalize, gcn_cached):
+def get_conv_layer(name, in_channels, hidden_channels, out_channels, gcn_normalize, gcn_cached, heads):
     if name.startswith("gcn"):
         return GCNConv(in_channels, out_channels, normalize=gcn_normalize, cached=gcn_cached)
     elif name.startswith("sage"):
@@ -26,6 +26,8 @@ def get_conv_layer(name, in_channels, hidden_channels, out_channels, gcn_normali
                 Linear(hidden_channels, out_channels)
             )
         )
+    elif name.startswith("gat"):
+        return GATConv(in_channels, out_channels, heads=heads)
     else:
         raise ValueError(f"{name} is not supported at this time!")
 
@@ -144,25 +146,28 @@ class VNGNN(torch.nn.Module):
     def __init__(self, in_channels, hidden_channels, out_channels, num_layers, dropout, num_nodes, edge_index,
                  model, num_vns=1, num_vns_conn=1, vn_idx="full",
                  aggregation="sum", graph_pool="sum", activation="relu", JK="last", gcn_normalize=True, gcn_cached=False,
-                 use_only_last=False, num_clusters=0, dataset=""):
+                 use_only_last=False, num_clusters=0, dataset="", heads=1):
         super().__init__()
         self.num_layers = num_layers
         self.convs = torch.nn.ModuleList()
         self.batch_norms = torch.nn.ModuleList()
 
         assert vn_idx != "graclus" or num_vns_conn == 1, "graclus only works with num_vns_conn = 1"
+        if not model.startswith("gat") and heads > 1:
+            print("Set heads to 1...")
+            heads = 1
 
         if num_layers == 1:
-            self.convs.append(get_conv_layer(model, in_channels, hidden_channels, out_channels, gcn_normalize=gcn_normalize, gcn_cached=gcn_cached))
+            self.convs.append(get_conv_layer(model, in_channels, hidden_channels, out_channels, gcn_normalize=gcn_normalize, gcn_cached=gcn_cached, heads=heads))
         else:
-            self.convs.append(get_conv_layer(model, in_channels, hidden_channels, hidden_channels, gcn_normalize=gcn_normalize, gcn_cached=gcn_cached))
-            self.batch_norms.append(BatchNorm1d(hidden_channels))
+            self.convs.append(get_conv_layer(model, in_channels, hidden_channels, hidden_channels, gcn_normalize=gcn_normalize, gcn_cached=gcn_cached, heads=heads))
+            self.batch_norms.append(BatchNorm1d(hidden_channels * heads))
             for _ in range(num_layers - 2):
                 self.convs.append(
-                    get_conv_layer(model, hidden_channels, hidden_channels, hidden_channels, gcn_normalize=gcn_normalize, gcn_cached=gcn_cached))
-                self.batch_norms.append(BatchNorm1d(hidden_channels))
+                    get_conv_layer(model, hidden_channels * heads, hidden_channels, hidden_channels, gcn_normalize=gcn_normalize, gcn_cached=gcn_cached, heads=heads))
+                self.batch_norms.append(BatchNorm1d(hidden_channels * heads))
             self.convs.append(
-                get_conv_layer(model, hidden_channels, hidden_channels, out_channels, gcn_normalize=gcn_normalize, gcn_cached=gcn_cached))
+                get_conv_layer(model, hidden_channels * heads, hidden_channels, out_channels, gcn_normalize=gcn_normalize, gcn_cached=gcn_cached, heads=1))
         self.batch_norms.append(BatchNorm1d(out_channels))
 
         self.num_nodes = num_nodes
@@ -184,24 +189,24 @@ class VNGNN(torch.nn.Module):
         for i in range(self.num_virtual_nodes):
             self.virtual_node_mlp.append(
                 Sequential(
-                    Linear(in_channels, 2 * hidden_channels),
+                    Linear(in_channels, 2 * hidden_channels * heads),
                     activation_layer,
-                    torch.nn.LayerNorm(2 * hidden_channels),
-                    Linear(2 * hidden_channels, hidden_channels),
+                    torch.nn.LayerNorm(2 * hidden_channels * heads),
+                    Linear(2 * hidden_channels * heads, hidden_channels * heads),
                     activation_layer,
-                    torch.nn.LayerNorm(hidden_channels),
+                    torch.nn.LayerNorm(hidden_channels * heads),
                 )
             )
         for layer in range(num_layers - 2):
             for i in range(self.num_virtual_nodes):
                 self.virtual_node_mlp.append(
                     Sequential(
-                        Linear(hidden_channels, 2 * hidden_channels),
+                        Linear(hidden_channels * heads, 2 * hidden_channels * heads),
                         activation_layer,
-                        torch.nn.LayerNorm(2 * hidden_channels),
-                        Linear(2 * hidden_channels, hidden_channels),
+                        torch.nn.LayerNorm(2 * hidden_channels * heads),
+                        Linear(2 * hidden_channels * heads, hidden_channels * heads),
                         activation_layer,
-                        torch.nn.LayerNorm(hidden_channels),
+                        torch.nn.LayerNorm(hidden_channels * heads),
                     )
                 )
 

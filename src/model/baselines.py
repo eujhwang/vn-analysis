@@ -114,8 +114,8 @@ class GAT(torch.nn.Module):
         self.convs = torch.nn.ModuleList()
         self.convs.append(GATConv(in_channels, hidden_channels, heads=heads))
         for _ in range(num_layers - 2):
-            self.convs.append(GATConv(hidden_channels*heads, hidden_channels*heads, heads=heads))
-        self.convs.append(GATConv(hidden_channels*heads, out_channels, heads=1))
+            self.convs.append(GATConv(hidden_channels * heads, hidden_channels, heads=heads))
+        self.convs.append(GATConv(hidden_channels * heads, out_channels, heads=1))
         self.dropout = dropout
 
     def reset_parameters(self):

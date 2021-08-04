@@ -25,7 +25,7 @@ def register_default_args(parser, ident):
     parser.add_argument('--model', type=str, default="gcn",
                         choices=["mlp", "gcn", "sage", "mlp", "gat", "sgc", "gin",
                                  "appnp", "gcn-gdc", "sage-gdc", "gin-gdc", "pgnn", "123gnn",
-                                 "gcn-vn", "sage-vn", "gin-vn"])
+                                 "gcn-vn", "sage-vn", "gin-vn", "gat-vn"])
     parser.add_argument('--clusters', type=int, default=0)  # metis+
     parser.add_argument('--vns', type=int, default=0)
     parser.add_argument('--vns_conn', type=int, default=3)  # is ignored (always considered 1) with graclus currently
@@ -60,7 +60,7 @@ def register_default_args(parser, ident):
 
     # ogbl-ppa uses node_embedding
     parser.add_argument('--use_node_embedding', action='store_true')
-    parser.add_argument('--heads', type=int, default=5)
+    parser.add_argument('--heads', type=int, default=1)
 
     # ogbl-collab uses node_embedding
     parser.add_argument('--use_valedges_as_input', type=int, default=0, help="0: false, 1: true")

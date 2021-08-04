@@ -40,7 +40,7 @@ def init_model(args, data, dataset_id, outdim=None):
         model = VNGNN(input_dim, args.hid_dim, outdim, args.layers, args.dropout, data.num_nodes, data.edge_index, args.model,
                       args.vns, args.vns_conn, args.vn_idx, aggregation=args.aggregation, activation=args.activation,
                       JK=args.JK, gcn_normalize=args.gcn_normalize, gcn_cached=args.gcn_cached, use_only_last=args.use_only_last,
-                      num_clusters=args.clusters, dataset=dataset_id)  #, normalize=False, cached=False)
+                      num_clusters=args.clusters, dataset=dataset_id, heads=args.heads)  #, normalize=False, cached=False)
     elif args.model == "appnp":
         model = APPNP_Net(input_dim, args.hid_dim, outdim, args.K, args.alpha, args.dropout)
     elif args.model == "pgnn":
