@@ -37,7 +37,17 @@ To run GCN extended with 1 virtual node (aka. `GCN-VN`) over `ogbl-ddi` run:
 For all possible parameter options see [here](./src/utils/parser.py).
 <br/>Please leave an issue if you have any trouble running the code.
 
+## Paper
 
+If the code is helpful for your project, please cite [our paper](./paper.pdf) (Bibtex below).
+```
+@article{hwang2021vns,
+  title={Revisiting Virtual Nodes in Graph Neural Networks for Link Prediction},
+  author={EunJeong Hwang, Veronika Thost, Shib Sankar Dasgupta, Tengfei Ma},
+  journal={arXiv preprint arXiv:2005.00687}, TBD
+  year={2020}
+}
+```
 
 ## References
 
