@@ -1,4 +1,7 @@
+import datetime
+import os
 import pickle
+import time
 from pathlib import Path
 from typing import Optional
 import torch
@@ -338,5 +341,5 @@ class VNGNN(torch.nn.Module):
             emb = 0
             for layer in range(1, self.num_layers):
                 emb += embs[layer]
-        return emb
+        return emb, virtual_node, self.vn_index
 

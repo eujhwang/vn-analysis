@@ -61,7 +61,11 @@ class Trainer:
         self.model_save_path = self.model_save_dir + f"{dataset_id}_model_{timestamp}_{wandb_id}.pt"
         self.predictor_save_path = self.model_save_dir + f"{dataset_id}_predictor_{timestamp}_{wandb_id}.pt"
 
-    def update_save_best_score(self, valid_score: float, test_score: float, epoch: int):
+        self.node_info_save_dir = f"./saved_embeddings/{dataset_id}/"
+        Path(self.node_info_save_dir).mkdir(parents=True, exist_ok=True)
+        self.node_info_save_path = self.node_info_save_dir  + f"emb_{timestamp}_{wandb_id}.pkl"
+
+    def update_save_best_score(self, valid_score: float, test_score: float, epoch: int, emb=None, vn_emb=None, vn_index=None):
         if self.best_valid_score < valid_score:
             self.best_valid_score = valid_score
             self.best_test_score = test_score
@@ -70,6 +74,9 @@ class Trainer:
             torch.save(self.predictor.state_dict(), self.predictor_save_path)
             print("model is saved here: %s, predictor saved path: %s, best epoch: %s, best valid f1 score: %f, best test f1 score: %f"
                   % (os.path.abspath(self.model_save_path), os.path.abspath(self.predictor_save_path), self.best_epoch, self.best_valid_score, self.best_test_score))
+            if emb is not None and vn_emb is not None and vn_index is not None:
+                torch.save({"emb": emb, "vn_emb": vn_emb, "vn_index": vn_index}, self.node_info_save_path)
+                print("emb will be saved here:", os.path.abspath(self.node_info_save_path))
 
     def train(self):
         print("Training start..")
@@ -98,7 +105,10 @@ class Trainer:
                     self.data = self.epoch_transform(self.data)
                 # perm: [batch_size]; [16384]
                 self.opt.zero_grad()
-                h = self.model(self.data)
+                if isinstance(self.model, VNGNN):
+                    h, vn_emb, vn_index = self.model(self.data)
+                else:
+                    h = self.model(self.data)
 
                 edge = pos_train_edge[perm].t()
                 pos_out = self.predictor(h[edge[0]], h[edge[1]])
@@ -138,15 +148,15 @@ class Trainer:
                 metrics = self.evaluation.evaluate(pos_train_pred)
 
                 if self.dataset_id == "ogbl-ppa":
-                    self.update_save_best_score(metrics["[Valid] Hits@100"], metrics["[Test] Hits@100"], epoch)
+                    self.update_save_best_score(metrics["[Valid] Hits@100"], metrics["[Test] Hits@100"], epoch, h, vn_emb, vn_index)
                     metrics["[Valid] Best Hits@100"] = self.best_valid_score
                     metrics["[Test] Best Hits@100"] = self.best_test_score
                 elif self.dataset_id == "ogbl-collab":
-                    self.update_save_best_score(metrics["[Valid] Hits@50"], metrics["[Test] Hits@50"], epoch)
+                    self.update_save_best_score(metrics["[Valid] Hits@50"], metrics["[Test] Hits@50"], epoch, h, vn_emb, vn_index)
                     metrics["[Valid] Best Hits@50"] = self.best_valid_score
                     metrics["[Test] Best Hits@50"] = self.best_test_score
                 elif self.dataset_id == "ogbl-ddi":
-                    self.update_save_best_score(metrics["[Valid] Hits@20"], metrics["[Test] Hits@20"], epoch)
+                    self.update_save_best_score(metrics["[Valid] Hits@20"], metrics["[Test] Hits@20"], epoch, h, vn_emb, vn_index)
                     metrics["[Valid] Best Hits@20"] = self.best_valid_score
                     metrics["[Test] Best Hits@20"] = self.best_test_score
                 print("metrics", metrics)
@@ -204,7 +214,10 @@ class Evaluation:
         if isinstance(self.model, VNGNN):
             self.model.init_epoch()
 
-        h = self.model(self.data)
+        if isinstance(self.model, VNGNN):
+            h, _, _ = self.model(self.data)
+        else:
+            h = self.model(self.data)
 
         pos_valid_edge = self.data_edge_dict['valid']['edge'].to(h.device)
         neg_valid_edge = self.data_edge_dict['valid']['edge_neg'].to(h.device)
@@ -228,7 +241,10 @@ class Evaluation:
             adj_saved = self.data.adj_t
             self.data.edge_index = self.data.full_edge_index
             self.data.adj_t = self.data.full_adj_t
-            h = self.model(self.data)
+            if isinstance(self.model, VNGNN):
+                h, _, _ = self.model(self.data)
+            else:
+                h = self.model(self.data)
             self.data.edge_index = ei_saved
             self.data.adj_t = adj_saved
 
