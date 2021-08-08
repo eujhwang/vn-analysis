@@ -74,9 +74,9 @@ class Trainer:
             torch.save(self.predictor.state_dict(), self.predictor_save_path)
             print("model is saved here: %s, predictor saved path: %s, best epoch: %s, best valid f1 score: %f, best test f1 score: %f"
                   % (os.path.abspath(self.model_save_path), os.path.abspath(self.predictor_save_path), self.best_epoch, self.best_valid_score, self.best_test_score))
-            if emb is not None and vn_emb is not None and vn_index is not None:
-                torch.save({"emb": emb, "vn_emb": vn_emb, "vn_index": vn_index}, self.node_info_save_path)
-                print("emb will be saved here:", os.path.abspath(self.node_info_save_path))
+            # if emb is not None and vn_emb is not None and vn_index is not None:
+            #     torch.save({"emb": emb, "vn_emb": vn_emb, "vn_index": vn_index}, self.node_info_save_path)
+            #     print("emb will be saved here:", os.path.abspath(self.node_info_save_path))
 
     def train(self):
         print("Training start..")
