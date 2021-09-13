@@ -1,5 +1,6 @@
 import logging
 import os
+import os.path as osp
 import random
 import time
 import warnings
@@ -10,8 +11,10 @@ import numpy as np
 from pathlib import Path
 from typing import *
 from ogb.linkproppred import PygLinkPropPredDataset, LinkPropPredDataset
+from torch_geometric.data import Data
 from torch_sparse import SparseTensor
-from torch_geometric.utils import to_undirected
+from torch_geometric.utils import to_undirected, train_test_split_edges, add_self_loops, negative_sampling
+from torch_geometric.datasets import PPI, Planetoid
 import torch_geometric.transforms as T
 import pandas as pd
 
@@ -90,6 +93,30 @@ def set_seed(seed: int):
     torch.backends.cudnn.deterministic = True
 
 
+def do_edge_split(data):
+    """
+    split edges into pos and neg, 50% for each
+    Args:
+        data: Data(x=..., y=..., edge_index=[...], num_nodes=...)
+    Returns:
+        Tensor: pos_edge_index, neg_edge_index
+    """
+    num_nodes = data.num_nodes
+    row, col = data.edge_index
+    mask = row < col
+    row, col = row[mask], col[mask]
+
+    # positive edges 50% of edges -> positive
+    perm = torch.randperm(row.size(0))
+    row, col = row[perm], col[perm]
+    pos_edge_index = torch.stack([row, col], dim=0)
+
+    # negative edges the rest 50% of edges -> negative
+    neg_edge_index = negative_sampling(data.edge_index, num_nodes=num_nodes, num_neg_samples=row.size(0))
+
+    return pos_edge_index, neg_edge_index
+
+
 def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
 
     epoch_transform = None
@@ -165,6 +192,47 @@ def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
         data.x = data.emb.weight  # VT needs to be tested, not fully sure if works like this
         data_edge_dict = dataset.get_edge_split()
 
+    elif dataset_id == "ogbl-ppi":
+        device = cuda_if_available(args.device)
+
+        train_data = PPI(root=args.data_dir, split="train", transform=T.ToSparseTensor(remove_edge_index=False))
+        valid_data = PPI(root=args.data_dir, split="val", transform=T.ToSparseTensor(remove_edge_index=False))
+        test_data = PPI(root=args.data_dir, split="test", transform=T.ToSparseTensor(remove_edge_index=False))
+
+        data = Data(
+            edge_index=torch.cat([train_data.data.edge_index, valid_data.data.edge_index, test_data.data.edge_index], dim=1),
+            x=torch.cat([train_data.data.x, valid_data.data.x, test_data.data.x], dim=0),
+            y=torch.cat([train_data.data.y, valid_data.data.y, test_data.data.y], dim=0)
+        )
+
+        # adding adj_t by converting it to SparseTensor
+        data = T.ToSparseTensor(remove_edge_index=False)(data).to(device)
+
+        train_pos_edge_index = train_data.data.edge_index
+        valid_pos_edge_index, valid_neg_edge_index = do_edge_split(valid_data.data)
+        test_pos_edge_index, test_neg_edge_index = do_edge_split(test_data.data)
+        data_edge_dict = {
+            "train": {"edge": train_pos_edge_index.t().to(device)},
+            "valid": {"edge": valid_pos_edge_index.t().to(device), "edge_neg": valid_neg_edge_index.t().to(device)},
+            "test": {"edge": test_pos_edge_index.t().to(device), "edge_neg": test_neg_edge_index.t().to(device)}
+        }
+
+    elif dataset_id == "ogbl-cora":
+        device = cuda_if_available(args.device)
+        dataset = Planetoid(args.data_dir, "Cora")
+        data = T.ToSparseTensor(remove_edge_index=False)(dataset[0])
+
+        splitted_data = train_test_split_edges(dataset[0], 0.05, 0.1)
+        edge_index, _ = add_self_loops(splitted_data.train_pos_edge_index)
+        splitted_data.train_neg_edge_index = negative_sampling(
+            edge_index, num_nodes=splitted_data.num_nodes,
+            num_neg_samples=splitted_data.train_pos_edge_index.size(1))
+
+        data_edge_dict = {
+            "train": {"edge": splitted_data.train_pos_edge_index.t().to(device), "edge_neg": splitted_data.train_neg_edge_index.t().to(device)},
+            "valid": {"edge": splitted_data.val_pos_edge_index.t().to(device), "edge_neg": splitted_data.val_neg_edge_index.t().to(device)},
+            "test": {"edge": splitted_data.test_pos_edge_index.t().to(device), "edge_neg": splitted_data.test_neg_edge_index.t().to(device)}
+        }
     return data, data_edge_dict, epoch_transform
 
 

@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 from model.baselines import GCN, SAGE, GAT, SGC, GIN, APPNP_Net
 from model.pgnn import PGNN, PGNN_LinkPredictor
 from model.kgnn import GNN123
@@ -9,7 +10,10 @@ from model.mlp import MLP, LinkPredictor
 
 def init_model(args, data, dataset_id, outdim=None):
     model = None
-    input_dim = data.num_features
+    if dataset_id == "ogbl-ppi":
+        input_dim = data.x.shape[1]
+    else:
+        input_dim = data.num_features
 
     if outdim is None:
         outdim = args.hid_dim
@@ -28,7 +32,7 @@ def init_model(args, data, dataset_id, outdim=None):
         if dataset_id == "ogbl-ppa":
             model = GCN(input_dim, args.hid_dim, outdim, args.layers, args.dropout, normalize=False, cached=False)
             precompute_norm(data)
-        elif dataset_id == "ogbl-collab" or dataset_id == "ogbl-ddi":
+        elif dataset_id == "ogbl-collab" or dataset_id == "ogbl-ddi" or dataset_id == "ogbl-ppi" or dataset_id == "ogbl-cora":
             model = GCN(input_dim, args.hid_dim, outdim, args.layers, args.dropout, normalize=True, cached=True)
     elif args.model == "gat":
         model = GAT(input_dim, args.hid_dim, outdim, args.layers, args.heads, args.dropout)
