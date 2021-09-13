@@ -148,15 +148,15 @@ class Trainer:
                 metrics = self.evaluation.evaluate(pos_train_pred)
 
                 if self.dataset_id == "ogbl-ppa":
-                    self.update_save_best_score(metrics["[Valid] Hits@100"], metrics["[Test] Hits@100"], epoch, h, vn_emb, vn_index)
+                    self.update_save_best_score(metrics["[Valid] Hits@100"], metrics["[Test] Hits@100"], epoch)
                     metrics["[Valid] Best Hits@100"] = self.best_valid_score
                     metrics["[Test] Best Hits@100"] = self.best_test_score
                 elif self.dataset_id == "ogbl-collab":
-                    self.update_save_best_score(metrics["[Valid] Hits@50"], metrics["[Test] Hits@50"], epoch, h, vn_emb, vn_index)
+                    self.update_save_best_score(metrics["[Valid] Hits@50"], metrics["[Test] Hits@50"], epoch)
                     metrics["[Valid] Best Hits@50"] = self.best_valid_score
                     metrics["[Test] Best Hits@50"] = self.best_test_score
                 elif self.dataset_id == "ogbl-ddi":
-                    self.update_save_best_score(metrics["[Valid] Hits@20"], metrics["[Test] Hits@20"], epoch, h, vn_emb, vn_index)
+                    self.update_save_best_score(metrics["[Valid] Hits@20"], metrics["[Test] Hits@20"], epoch)
                     metrics["[Valid] Best Hits@20"] = self.best_valid_score
                     metrics["[Test] Best Hits@20"] = self.best_test_score
                 print("metrics", metrics)
