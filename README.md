@@ -1,7 +1,7 @@
 # Virtual Nodes Revisited
 
 **TL;DR**
-We propose new methods for extending GNNs with virtual nodes for link prediction.
+We propose new methods for extending GNNs with multiple (!) virtual nodes for link prediction.
 
 
 <p align="center">
