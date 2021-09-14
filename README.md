@@ -14,7 +14,7 @@ We propose new methods for extending GNNs with virtual nodes for link prediction
 Virtual nodes are well known to often improve the graph classification performance of graph neural networks, where a single artificial virtual node is added to every graph and connected to all nodes in the graph [1,2,3,4]. 
 
 **We propose to use multiple virtual nodes in the link prediction scenario and describe a graph-based technique to connect them to the graph nodes.** 
-In a nutshell, we use a graph clustering algorithm to determine groups of nodes in the graph that belong together and then connect these nodes to a common virtual node. In this way, under-reaching is decreased because clustered nodes can share information easily; at the same time, the nodes are spared of unnecessary information from unrelated nodes (i.e., in contrast to the single virtual node model).
+In a nutshell, we use a graph clustering algorithm to determine groups of nodes in the graph that belong together and then connect these nodes to the same virtual node. In this way, under-reaching is decreased because clustered nodes can share information easily; at the same time, the nodes are spared of unnecessary information from unrelated nodes (i.e., in contrast to the single virtual node model).
 More details are given in [our paper](./paper.pdf).
 ## Installation
 * Tested with Python 3.8, PyTorch 1.8.1., and PyTorch Geometric 1.6.3.
