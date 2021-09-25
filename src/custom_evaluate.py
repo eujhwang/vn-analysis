@@ -95,7 +95,7 @@ class CustomEvaluation:
         neg_test_pred = torch.cat(neg_test_preds, dim=0)
 
         results = {}
-        for K in [10, 20, 30, 50, 100]:
+        for K in [5, 10, 20, 30, 50, 100]:
             # dummy train, using valid
             if pos_train_pred is not None:
                 train_hits = self._eval_hits(pos_train_pred, neg_valid_pred, K)[f'hits@{K}']
