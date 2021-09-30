@@ -1,18 +1,20 @@
 import wandb
-import logging
 
+import pandas as pd
 from torch import Tensor
 from torch.utils.data import DataLoader
+
+from custom_evaluate import CustomEvaluation
 from model.mlp import LinkPredictor
 from train import Trainer, Evaluation
 from utils.parser import build_args
 from utils.utils import *
 from model.utils import init_model
 
-
 # necessary to flush on some nodes, setting it globally here
 import functools
 print = functools.partial(print, flush=True)
+
 
 def create_dataloader(data_edge_dict: Dict[str, Tensor], log_batch_size: int):
     pos_train_edge = data_edge_dict["train"]["edge"]
@@ -33,10 +35,9 @@ def create_dataloader(data_edge_dict: Dict[str, Tensor], log_batch_size: int):
 
 def setup(args):
     device = cuda_if_available(args.device)
-    dataset_id = "ogbl-ddi"
+    dataset_id = "ogbl-pubmed"
     data_dir = Path(args.data_dir).expanduser()
     data, data_edge_dict, epoch_transform = create_dataset(args, dataset_id, data_dir)
-
     data = data.to(device)
 
     train_dataloader, valid_pos_dataloader, valid_neg_dataloader, test_pos_dataloader, test_neg_dataloader = create_dataloader(data_edge_dict, args.log_batch_size)
@@ -47,9 +48,9 @@ def setup(args):
 
     wandb.watch(model)
 
-    optimizer = torch.optim.Adam(list(model.parameters()) + list(predictor.parameters()) + (list(data.emb.parameters()) if hasattr(data, "emb") else []), lr=args.lr)
+    optimizer = torch.optim.Adam(list(model.parameters()) + list(predictor.parameters()), lr=args.lr)
 
-    evaluation = Evaluation(
+    evaluation = CustomEvaluation(
         dataset_id=dataset_id,
         model=model,
         predictor=predictor,
@@ -84,11 +85,11 @@ def setup(args):
 
 
 def main():
-    args = build_args("ddi")
+    args = build_args("pubmed")
     assert args.model  # must not be empty for node property prediction
     if args.cross_valid:
         assert args.wandb_id != ""
-        logger = set_logger("ogbl-ddi", args.wandb_id)
+        logger = set_logger("ogbl-pubmed", args.wandb_id)
         wandb.init(reinit=True)
         seed = args.seed
         api = wandb.Api()
@@ -118,15 +119,16 @@ def main():
 
         best_valid_score_tensor = torch.tensor(best_valid_scores)
         best_test_score_tensor = torch.tensor(best_test_scores)
-        logger.info(f"Best Valid: {best_valid_score_tensor.mean():.4f} ± {best_valid_score_tensor.std():.4f}")
-        logger.info(f"Final Test: {best_test_score_tensor.mean():.4f} ± {best_test_score_tensor.std():.4f}")
+        logger.info(f"Best Valid: {best_valid_score_tensor.mean():.2f} ± {best_valid_score_tensor.std():.2f}")
+        logger.info(f"Final Test: {best_test_score_tensor.mean():.2f} ± {best_test_score_tensor.std():.2f}")
     else:
         wandb.init()
-        set_seed(args.seed)
         wandb.config.update(args, allow_val_change=True)
         args = wandb.config
+        set_seed(args.seed)
         trainer = setup(args)
         trainer.train()
+
 
 if __name__ == "__main__":
     main()

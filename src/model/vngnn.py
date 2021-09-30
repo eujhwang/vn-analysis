@@ -132,7 +132,7 @@ def get_vn_index(name, num_ns, num_vns, num_vns_conn, edge_index, dataset):
         cluster_save_dir = "./saved_clusters/" + f"{dataset}/"
         Path(cluster_save_dir).mkdir(parents=True, exist_ok=True)
 
-        clu = ClusterData(Data(edge_index=edge_index), num_parts=num_vns, save_dir=cluster_save_dir)
+        clu = ClusterData(Data(edge_index=edge_index, num_nodes=num_ns), num_parts=num_vns, save_dir=cluster_save_dir)
         diff = num_ns - len(clu.perm) # if some nodes with idx>max_id, then diff > 0
         idx = torch.zeros(num_vns, num_ns)
         for i in range(num_vns):
@@ -183,7 +183,7 @@ class VNGNN(torch.nn.Module):
         self.cl_index = self.vn_index # this will be different later only for metis+
         self.num_virtual_nodes = self.vn_index.shape[0] if self.vn_index is not None and vn_idx != "metis+" else num_vns  # might be > as num_vns in case we cannot split into less with graclus...
         self.virtual_node = torch.nn.Embedding(self.num_virtual_nodes, in_channels)
-        torch.nn.init.constant_(self.virtual_node.weight.data, 0)  # set the initial virtual node embedding to 0.
+        torch.nn.init.xavier_uniform_(self.virtual_node.weight.data)
 
         self.graph_pooling_layer = get_graph_pooling(graph_pool)
 

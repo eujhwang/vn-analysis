@@ -85,10 +85,13 @@ def cuda_if_available(device) -> torch.device:
 
 
 def set_seed(seed: int):
-    torch.manual_seed(seed)
-    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
     np.random.seed(seed)
+    random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.enabled = False
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
 
@@ -221,18 +224,23 @@ def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
         device = cuda_if_available(args.device)
         dataset = Planetoid(args.data_dir, "Cora")
         data = T.ToSparseTensor(remove_edge_index=False)(dataset[0])
-
         splitted_data = train_test_split_edges(dataset[0], 0.05, 0.1)
-        edge_index, _ = add_self_loops(splitted_data.train_pos_edge_index)
-        splitted_data.train_neg_edge_index = negative_sampling(
-            edge_index, num_nodes=splitted_data.num_nodes,
-            num_neg_samples=splitted_data.train_pos_edge_index.size(1))
-
         data_edge_dict = {
-            "train": {"edge": splitted_data.train_pos_edge_index.t().to(device), "edge_neg": splitted_data.train_neg_edge_index.t().to(device)},
+            "train": {"edge": splitted_data.train_pos_edge_index.t().to(device)},
             "valid": {"edge": splitted_data.val_pos_edge_index.t().to(device), "edge_neg": splitted_data.val_neg_edge_index.t().to(device)},
             "test": {"edge": splitted_data.test_pos_edge_index.t().to(device), "edge_neg": splitted_data.test_neg_edge_index.t().to(device)}
         }
+    elif dataset_id == "ogbl-pubmed":
+        device = cuda_if_available(args.device)
+        dataset = Planetoid(args.data_dir, "PubMed")
+        data = T.ToSparseTensor(remove_edge_index=False)(dataset[0])
+        splitted_data = train_test_split_edges(dataset[0], 0.05, 0.1)
+        data_edge_dict = {
+            "train": {"edge": splitted_data.train_pos_edge_index.t().to(device)},
+            "valid": {"edge": splitted_data.val_pos_edge_index.t().to(device), "edge_neg": splitted_data.val_neg_edge_index.t().to(device)},
+            "test": {"edge": splitted_data.test_pos_edge_index.t().to(device), "edge_neg": splitted_data.test_neg_edge_index.t().to(device)}
+        }
+
     return data, data_edge_dict, epoch_transform
 
 
