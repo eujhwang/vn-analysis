@@ -163,6 +163,10 @@ class Trainer:
                     self.update_save_best_score(metrics["[Valid] Hits@10"], metrics["[Test] Hits@10"], epoch)
                     metrics["[Valid] Best Hits@10"] = self.best_valid_score
                     metrics["[Test] Best Hits@10"] = self.best_test_score
+                elif self.dataset_id == "ogbl-pubmed":
+                    self.update_save_best_score(metrics["[Valid] Hits@20"], metrics["[Test] Hits@20"], epoch)
+                    metrics["[Valid] Best Hits@20"] = self.best_valid_score
+                    metrics["[Test] Best Hits@20"] = self.best_test_score
                 print("metrics", metrics)
                 wandb.log(metrics, commit=False)
                 if (epoch - self.best_epoch) >= self.patience:
