@@ -137,3 +137,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+src/wandb/
+src/dataset/
+src/saved_embeddings/
+.idea
+
+ogb-examples
