@@ -152,7 +152,7 @@ def create_dataset(args, dataset_id: str, data_dir: Union[Path, str]):
         dataset = PygLinkPropPredDataset(name='ogbl-ddi',
                                          transform=T.Compose([transform, T.ToSparseTensor(remove_edge_index=False)]))
         data = dataset[0]
-
+        data.num_nodes = data.adj_t.to_dense().shape[0]
         device = cuda_if_available(args.device)
         data.emb = torch.nn.Embedding(data.num_nodes, args.hid_dim).to(device)
         torch.nn.init.xavier_uniform_(data.emb.weight)
