@@ -1,4 +1,4 @@
-# Virtual Nodes Revisited
+# An Analysis of Virtual Nodes in Graph Neural Networks for Link Prediction
 
 **TL;DR**
 We propose new methods for extending GNNs with multiple (!) virtual nodes for link prediction.
@@ -15,7 +15,7 @@ Virtual nodes are well known to often improve the graph classification performan
 
 **We propose to use multiple virtual nodes in the link prediction scenario and describe a graph-based technique to connect them to the graph nodes.** 
 In a nutshell, we use a graph clustering algorithm to determine groups of nodes in the graph that belong together and then connect these nodes to the same virtual node. In this way, under-reaching is decreased because clustered nodes can share information easily; at the same time, the nodes are spared of unnecessary information from unrelated nodes (i.e., in contrast to the single virtual node model).
-More details are given in [our paper](./paper.pdf).
+More details are given in [our paper](https://openreview.net/pdf?id=dI6KBKNRp7).
 ## Installation
 * Tested with Python 3.8, PyTorch 1.8.1., and PyTorch Geometric 1.6.3.
 * Set up an Anaconda environment: `./setup.sh` 
@@ -39,13 +39,13 @@ For all possible parameter options see [here](./src/utils/parser.py).
 
 ## Paper
 
-If the code is helpful for your project, please cite [our paper](./paper.pdf) (Bibtex below).
+If the code is helpful for your project, please cite [our paper](https://openreview.net/pdf?id=dI6KBKNRp7) (Bibtex below).
 ```
-@article{hwang2021vns,
-  title={Revisiting Virtual Nodes in Graph Neural Networks for Link Prediction},
+@article{hwang2022vns,
+  title={An Analysis of Virtual Nodes in Graph Neural Networks for Link Prediction},
   author={EunJeong Hwang, Veronika Thost, Shib Sankar Dasgupta, Tengfei Ma},
-  journal={arXiv preprint arXiv:2005.00687}, TBD
-  year={2020}
+  journal={Learning on Graphs},
+  year={2022}
 }
 ```
 
