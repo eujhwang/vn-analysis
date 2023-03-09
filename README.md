@@ -34,6 +34,9 @@ To run GCN extended with 1 virtual node (aka. `GCN-VN`) over `ogbl-ddi` run:
     
 `python src/ogbl_ddi.py --data_dir=data --model=gcn-vn --vns=1 --vn_idx=full`
 
+GCN-VN
+`python src/ogbl_ddi.py --JK=sum --activation=[elu or leaky relu] --aggregation=[sum or mean] --dropout=[0 or 0.3 or 0.6] --epochs=500 --eval_steps=1 --gcn_cached=1 --gcn_normalize=1 --hid_dim=256 --layers=3 --log_batch_size=12 --lr=0.005 --model=gcn-vn --patience=30 --vn_idx=full --vns=1 --vns_conn=1`
+
 For all possible parameter options see [here](./src/utils/parser.py).
 <br/>Please leave an issue if you have any trouble running the code.
 
